@@ -90,7 +90,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
-          <p id="statsBar" class="text-[11px] text-stone-400">共 5 世 · 19 位族人</p>
+          <p id="statsBar" class="text-[11px] text-stone-400">共 4 世 · 10 位族人</p>
           <span id="autoSaveIndicator" class="text-[10px] text-emerald-400 flex items-center gap-1">
             <i class="fa-solid fa-cloud-check"></i>已实时自动保存
           </span>
@@ -108,14 +108,6 @@
           oninput="handleSearch(this.value)" />
         <div id="searchResults" class="hidden absolute left-0 top-9 w-64 bg-white text-stone-800 rounded-lg shadow-xl border border-stone-200 max-h-64 overflow-y-auto z-50"></div>
       </div>
-
-      <!-- 一键隐藏/显示妻子（外姓配偶）开关按钮 -->
-      <button id="toggleHideSpouseBtn" onclick="toggleHideSpouses()"
-        class="text-xs bg-stone-800 hover:bg-stone-700 text-rose-200 border border-stone-700 px-2.5 py-1.5 rounded transition flex items-center gap-1 font-medium"
-        title="一键隐藏或显示妻子（外姓配偶），隐藏后将在丈夫卡片底部备注配偶姓名">
-        <i id="toggleHideSpouseIcon" class="fa-solid fa-eye-slash text-rose-400"></i>
-        <span id="toggleHideSpouseText">隐藏妻子</span>
-      </button>
 
       <!-- 快捷回退 / 重做 / 修改记录按钮组（管理员可见） -->
       <div class="admin-only-block flex items-center bg-stone-800 rounded border border-stone-700 p-0.5">
@@ -179,8 +171,8 @@
               <i class="fa-solid fa-arrow-left-long mr-1"></i>古籍尚右规制：自右向左排（老大在最右 · 最小在最左）
             </span>
           </div>
-          <span id="spouseVisibilityHint" class="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            💡 点顶栏「隐藏妻子」可只看本族血脉节点
+          <span class="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            💡 支持 Ctrl+Z 快捷回退，或点顶部「修改记录」退回任意一步
           </span>
         </div>
       </div>
@@ -210,8 +202,8 @@
 
       <!-- 画布平移与缩放层 -->
       <div id="viewport" class="w-full h-full origin-top-left" style="transform: translate(0px, 0px) scale(1);">
-        <svg id="connectionsSvg" class="absolute top-0 left-0 pointer-events-none" style="width: 10000px; height: 6000px; overflow: visible;"></svg>
-        <div id="nodesLayer" class="absolute top-0 left-0" style="width: 10000px; height: 6000px;"></div>
+        <svg id="connectionsSvg" class="absolute top-0 left-0 pointer-events-none" style="width: 8000px; height: 6000px; overflow: visible;"></svg>
+        <div id="nodesLayer" class="absolute top-0 left-0" style="width: 8000px; height: 6000px;"></div>
       </div>
     </main>
 
@@ -328,17 +320,6 @@
             </div>
             <div id="currentParentsDisplay" class="grid grid-cols-2 gap-1.5 text-xs"></div>
           </div>
-
-          <!-- 当前绑定的配偶列表（即使开启了隐藏妻子，也能在此查看或点击编辑妻子信息） -->
-          <div class="bg-white border border-stone-200 rounded-lg p-2.5 text-xs space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="font-semibold text-stone-700"><i class="fa-solid fa-heart text-rose-600 mr-1"></i>连理配偶：</span>
-              <button onclick="toggleHideSpouses()" class="text-[11px] text-rose-700 hover:underline">
-                <span id="sideSpouseToggleText">隐藏/显示树图妻子</span>
-              </button>
-            </div>
-            <div id="currentSpousesDisplay" class="flex flex-wrap gap-1.5 text-xs"></div>
-          </div>
         </div>
 
         <!-- 3. 子女排行与次序调整（以右为长，自右向左排布） -->
@@ -364,7 +345,7 @@
           <div id="childrenSortList" class="space-y-1.5 max-h-52 overflow-y-auto pr-0.5"></div>
         </div>
 
-        <!-- 4. 个人基础名讳与生平编辑（支持丝滑中文拼音输入） -->
+        <!-- 4. 个人基础名讳与生平编辑 -->
         <div class="bg-white border border-stone-200 rounded-lg p-3 space-y-3 shadow-sm">
           <h3 class="text-xs font-bold text-stone-700 border-b border-stone-100 pb-1.5 flex items-center justify-between">
             <span><i class="fa-solid fa-pen-nib text-[#9e2a2b] mr-1"></i>名讳与生平考略</span>
@@ -376,11 +357,11 @@
           <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="block text-[11px] text-stone-500 mb-1">姓名 / 名讳</label>
-              <input id="fieldName" type="text" class="person-text-input admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" data-field="name" />
+              <input id="fieldName" type="text" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" oninput="savePersonField('name', this.value)" />
             </div>
             <div>
               <label class="block text-[11px] text-stone-500 mb-1">性别</label>
-              <select id="fieldGender" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2 py-1.5 focus:outline-none focus:border-[#9e2a2b] bg-white" onchange="savePersonField('gender', this.value, true)">
+              <select id="fieldGender" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2 py-1.5 focus:outline-none focus:border-[#9e2a2b] bg-white" onchange="savePersonField('gender', this.value)">
                 <option value="M">男丁 (乾)</option>
                 <option value="F">女眷 (坤)</option>
               </select>
@@ -390,28 +371,28 @@
           <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="block text-[11px] text-stone-500 mb-1">字 / 号 / 辈字</label>
-              <input id="fieldCourtesy" type="text" placeholder="如：字太白" class="person-text-input admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" data-field="courtesy" />
+              <input id="fieldCourtesy" type="text" placeholder="如：字太白" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" oninput="savePersonField('courtesy', this.value)" />
             </div>
             <div>
               <label class="block text-[11px] text-stone-500 mb-1">堂内称谓 / 封号</label>
-              <input id="fieldTitle" type="text" placeholder="如：始迁祖 / 进士" class="person-text-input admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" data-field="title" />
+              <input id="fieldTitle" type="text" placeholder="如：始迁祖 / 进士" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" oninput="savePersonField('title', this.value)" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-2.5">
             <div>
               <label class="block text-[11px] text-stone-500 mb-1">生年</label>
-              <input id="fieldBirth" type="text" placeholder="如：1920" class="person-text-input admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" data-field="birthYear" />
+              <input id="fieldBirth" type="text" placeholder="如：1920" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" oninput="savePersonField('birthYear', this.value)" />
             </div>
             <div>
               <label class="block text-[11px] text-stone-500 mb-1">卒年（健在填“今”）</label>
-              <input id="fieldDeath" type="text" placeholder="如：今 或 2005" class="person-text-input admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" data-field="deathYear" />
+              <input id="fieldDeath" type="text" placeholder="如：今 或 2005" class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" oninput="savePersonField('deathYear', this.value)" />
             </div>
           </div>
 
           <div>
             <label class="block text-[11px] text-stone-500 mb-1">生平事略 / 葬地备考</label>
-            <textarea id="fieldBio" rows="2" placeholder="记载生平事迹、迁徙地、墓葬朝向等..." class="person-text-input admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" data-field="bio"></textarea>
+            <textarea id="fieldBio" rows="2" placeholder="记载生平事迹、迁徙地、墓葬朝向等..." class="admin-edit-control w-full text-xs border border-stone-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]" oninput="savePersonField('bio', this.value)"></textarea>
           </div>
         </div>
 
@@ -419,7 +400,7 @@
     </aside>
   </div>
 
-  <!-- 模态框：查看修改记录与时光机定点回退弹窗 -->
+  <!-- 新增模态框：查看修改记录与时光机定点回退弹窗 -->
   <div id="historyModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-[#fdfbf7] border border-stone-300 rounded-xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[82vh]">
       <div class="px-5 py-3.5 bg-[#2c2623] text-amber-100 flex items-center justify-between shrink-0">
@@ -654,7 +635,7 @@
     </div>
   </div>
 
-  <!-- 模态框 3：全员同步与打包发布最新网页 -->
+  <!-- 模态框 3：全员同步与打包发布最新网页（默认严格隐藏 hidden） -->
   <div id="publishSyncModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-[#fdfbf7] border border-stone-300 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
       <div class="px-5 py-3.5 bg-[#2c2623] text-amber-100 flex items-center justify-between">
@@ -715,4 +696,2301 @@
   </div>
 
   <!-- 模态框 5：导出 PDF / PNG / JSON 备份 -->
-  <div id="exportModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p
+  <div id="exportModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-stone-300 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div class="px-5 py-3.5 bg-[#2c2623] text-amber-100 flex items-center justify-between">
+        <h3 class="serif-title font-bold text-base"><i class="fa-solid fa-file-export mr-2"></i>导出族谱画卷与数据备份</h3>
+        <button onclick="closeExportModal()" class="text-stone-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-5 space-y-3 text-xs">
+        <button onclick="exportFamilyPdf()" class="w-full flex items-center justify-between p-3.5 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white shadow transition">
+          <div class="text-left">
+            <div class="font-bold text-sm">📜 导出 PDF 族谱画卷（传统自右向左规制）</div>
+            <div class="text-[11px] text-amber-100/90 mt-0.5">宣纸古籍双线边框，含「排一·长子」等总排行标识</div>
+          </div>
+          <i class="fa-solid fa-download text-lg"></i>
+        </button>
+
+        <button onclick="exportHighResPng()" class="w-full flex items-center justify-between p-3.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-100 shadow transition">
+          <div class="text-left">
+            <div class="font-bold text-sm">🖼️ 导出高清 PNG 世系全图</div>
+            <div class="text-[11px] text-stone-300 mt-0.5">2倍超清画质，适合直接发家族微信群或打印装裱</div>
+          </div>
+          <i class="fa-solid fa-image text-lg"></i>
+        </button>
+
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-stone-200">
+          <button onclick="exportJsonBackup()" class="py-2.5 px-3 rounded border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 font-medium flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-code"></i>导出 JSON 备份
+          </button>
+          <label class="py-2.5 px-3 rounded border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 font-medium flex items-center justify-center gap-1.5 cursor-pointer">
+            <i class="fa-solid fa-upload"></i>导入 JSON 恢复
+            <input type="file" accept=".json" class="hidden" onchange="importJsonBackup(event)" />
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 顶部轻提示 Toast -->
+  <div id="toastBox" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-2">
+    <div id="toastText" class="bg-[#2c2623] text-amber-100 px-4 py-2 rounded-full shadow-lg text-xs border border-amber-500/40 flex items-center gap-2"></div>
+  </div>
+
+  <script>
+    /********************************************************************
+     * 一、内置快照与核心存储结构（保留您已录入的《唐氏家族》10位族人数据）
+     ********************************************************************/
+    /*__EMBEDDED_SNAPSHOT_START__*/
+    const EMBEDDED_DEFAULT_STORE = {"activeBookId":"book_1792307012596","adminPwdHash":"h_1eff327d","requirePasswordToEdit":true,"books":{"book_1792307012596":{"id":"book_1792307012596","name":"唐氏家族","hall":"敦本堂","people":{"p1":{"id":"p1","name":"香弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308214720_687","motherId":null,"spouseIds":[],"childrenIds":["p_1792307054866_608","p_1792307082303_684"]},"p_1792307054866_608":{"id":"p_1792307054866_608","name":"继贤","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p1","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792307082303_684":{"id":"p_1792307082303_684","name":"舒心","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p1","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792308126640_229":{"id":"p_1792308126640_229","name":"任财","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308152935_133","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792308152935_133":{"id":"p_1792308152935_133","name":"*保","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308266860_88","motherId":null,"spouseIds":[],"childrenIds":["p_1792308200695_571","p_1792308126640_229"]},"p_1792308200695_571":{"id":"p_1792308200695_571","name":"任弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308152935_133","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792308214720_687":{"id":"p_1792308214720_687","name":"四保","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308248698_53","motherId":null,"spouseIds":[],"childrenIds":["p1"]},"p_1792308248698_53":{"id":"p_1792308248698_53","name":"*","courtesy":"","title":"","gender":"M","generation":1,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":[],"childrenIds":["p_1792308214720_687"]},"p_1792308266860_88":{"id":"p_1792308266860_88","name":"*","courtesy":"","title":"","gender":"M","generation":1,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":[],"childrenIds":["p_1792308288400_913","p_1792308152935_133"]},"p_1792308288400_913":{"id":"p_1792308288400_913","name":"*","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308266860_88","motherId":null,"spouseIds":[],"childrenIds":[]}}}},"updatedAt":1792308319226};
+    /*__EMBEDDED_SNAPSHOT_END__*/
+
+    const STORAGE_KEY = 'YUANLIU_FAMILY_BOOKS_V5';
+    const AUTH_SESSION_KEY = 'YUANLIU_ADMIN_UNLOCKED_V5';
+    const MAX_HISTORY_STEPS = 50;
+
+    let store = {
+      activeBookId: 'book_default',
+      adminPwdHash: simpleHash('888888'),
+      requirePasswordToEdit: true,
+      books: {}
+    };
+
+    let isAdminUnlocked = true;
+    let selectedPersonId = null;
+    let currentRelModalMode = 'parent';
+    let currentRelModalTab = 'new';
+
+    let viewState = { x: 120, y: 60, scale: 1, isPanning: false, startX: 0, startY: 0 };
+
+    function simpleHash(str) {
+      let h = 2166136261 >>> 0;
+      const s = String(str || '');
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return 'h_' + (h >>> 0).toString(16);
+    }
+
+    function createDemoBook() {
+      const people = {
+        p1: { id: 'p1', name: '李崇德', courtesy: '字明远', title: '始迁祖', gender: 'M', generation: 1, birthYear: '1920', deathYear: '1998', bio: '自陇西迁居于此，耕读传家，立下家规。', fatherId: null, motherId: null, spouseIds: ['p2'], childrenIds: ['p5', 'p3', 'p4'] },
+        p2: { id: 'p2', name: '王淑贞', courtesy: '封太恭人', title: '始祖母', gender: 'F', generation: 1, birthYear: '1922', deathYear: '2003', bio: '勤俭持家，育有一女二子（长女居长）。', fatherId: null, motherId: null, spouseIds: ['p1'], childrenIds: ['p5', 'p3', 'p4'] },
+        p5: { id: 'p5', name: '李秀兰', courtesy: '适张氏', title: '大姐', gender: 'F', generation: 2, birthYear: '1943', deathYear: '今', bio: '同胞居长（排一·长女），温婉贤淑，任教多年。', fatherId: 'p1', motherId: 'p2', spouseIds: [], childrenIds: [] },
+        p3: { id: 'p3', name: '李振国', courtesy: '字守正', title: '长房', gender: 'M', generation: 2, birthYear: '1945', deathYear: '今', bio: '同胞行二（排二·长子），秉承家训，主修族谱。', fatherId: 'p1', motherId: 'p2', spouseIds: ['p6'], childrenIds: ['p8', 'p9'] },
+        p4: { id: 'p4', name: '李振邦', courtesy: '字守业', title: '二房', gender: 'M', generation: 2, birthYear: '1948', deathYear: '今', bio: '同胞行三（排三·次子），经商致富，捐建宗祠。', fatherId: 'p1', motherId: 'p2', spouseIds: ['p7'], childrenIds: ['p10'] },
+        p6: { id: 'p6', name: '陈慧芳', courtesy: '', title: '长房配', gender: 'F', generation: 2, birthYear: '1947', deathYear: '今', bio: '', fatherId: null, motherId: null, spouseIds: ['p3'], childrenIds: ['p8', 'p9'] },
+        p7: { id: 'p7', name: '林月娥', courtesy: '', title: '二房配', gender: 'F', generation: 2, birthYear: '1950', deathYear: '今', bio: '', fatherId: null, motherId: null, spouseIds: ['p4'], childrenIds: ['p10'] },
+        p8: { id: 'p8', name: '李嘉豪', courtesy: '字景行', title: '长孙', gender: 'M', generation: 3, birthYear: '1972', deathYear: '今', bio: '高级工程师。', fatherId: 'p3', motherId: 'p6', spouseIds: ['p11'], childrenIds: ['p12', 'p13'] },
+        p9: { id: 'p9', name: '李嘉欣', courtesy: '', title: '长孙女', gender: 'F', generation: 3, birthYear: '1976', deathYear: '今', bio: '建筑设计师。', fatherId: 'p3', motherId: 'p6', spouseIds: [], childrenIds: [] },
+        p10: { id: 'p10', name: '李嘉诚', courtesy: '字景明', title: '次孙', gender: 'M', generation: 3, birthYear: '1975', deathYear: '今', bio: '', fatherId: 'p4', motherId: 'p7', spouseIds: [], childrenIds: [] },
+        p11: { id: 'p11', name: '周雅琴', courtesy: '', title: '长孙媳', gender: 'F', generation: 3, birthYear: '1974', deathYear: '今', bio: '', fatherId: null, motherId: null, spouseIds: ['p8'], childrenIds: ['p12', 'p13'] },
+        p12: { id: 'p12', name: '李沐宸', courtesy: '', title: '曾长孙', gender: 'M', generation: 4, birthYear: '2001', deathYear: '今', bio: '', fatherId: 'p8', motherId: 'p11', spouseIds: [], childrenIds: [] },
+        p13: { id: 'p13', name: '李沐瑶', courtesy: '', title: '曾孙女', gender: 'F', generation: 4, birthYear: '2005', deathYear: '今', bio: '', fatherId: 'p8', motherId: 'p11', spouseIds: [], childrenIds: [] }
+      };
+      return {
+        id: 'book_default',
+        name: '陇西李氏宗谱',
+        hall: '陇西堂',
+        people,
+        history: [],
+        historyCursor: -1
+      };
+    }
+
+    function getCurrentBook() {
+      let b = store.books[store.activeBookId];
+      if (!b || !b.people || Object.keys(b.people).length === 0) {
+        b = createDemoBook();
+        store.books[b.id] = b;
+        store.activeBookId = b.id;
+      }
+      ensureBookHistoryInitialized(b);
+      return b;
+    }
+
+    function formatTimeStr(ts) {
+      const d = ts ? new Date(ts) : new Date();
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+    }
+
+    /********************************************************************
+     * 二、核心新增：修改记录日志系统 & 回退 (Undo) / 重做 (Redo) / 定点回退
+     ********************************************************************/
+    function clonePeopleSnapshot(people) {
+      return JSON.parse(JSON.stringify(people || {}));
+    }
+
+    function computeSnapshotStats(peopleObj) {
+      const list = Object.values(peopleObj || {});
+      const gens = new Set(list.map(p => p.generation || 1));
+      return { count: list.length, genCount: gens.size };
+    }
+
+    function ensureBookHistoryInitialized(book) {
+      if (!book) return;
+      if (!Array.isArray(book.history) || book.history.length === 0) {
+        const stats = computeSnapshotStats(book.people);
+        book.history = [{
+          id: 'h_init_' + Date.now(),
+          action: '初始载入族谱状态',
+          timestamp: Date.now(),
+          timeStr: formatTimeStr(),
+          peopleSnapshot: clonePeopleSnapshot(book.people),
+          selectedPersonId: selectedPersonId || Object.keys(book.people || {})[0] || null,
+          count: stats.count,
+          genCount: stats.genCount
+        }];
+        book.historyCursor = 0;
+      }
+      if (typeof book.historyCursor !== 'number' || book.historyCursor < 0 || book.historyCursor >= book.history.length) {
+        book.historyCursor = book.history.length - 1;
+      }
+    }
+
+    /**
+     * 记录一步修改历史（支持对连续打字修改同一字段进行智能合并，避免每敲一个字母产生一条冗余记录）
+     */
+    function recordHistoryStep(actionDesc, mergeKey = null) {
+      const book = getCurrentBook();
+      ensureBookHistoryInitialized(book);
+
+      // 如果当前游标不在最新处（说明之前执行过回退），则截断游标之后的未来分支
+      if (book.historyCursor < book.history.length - 1) {
+        book.history = book.history.slice(0, book.historyCursor + 1);
+      }
+
+      const now = Date.now();
+      const stats = computeSnapshotStats(book.people);
+      const lastEntry = book.history[book.history.length - 1];
+
+      // 若是连续输入同一个人的同一个字段（如3秒内连续打字改姓名/生平），直接更新最新一条快照
+      if (mergeKey && lastEntry && lastEntry.mergeKey === mergeKey && (now - lastEntry.timestamp < 4000)) {
+        lastEntry.action = actionDesc;
+        lastEntry.timestamp = now;
+        lastEntry.timeStr = formatTimeStr(now);
+        lastEntry.peopleSnapshot = clonePeopleSnapshot(book.people);
+        lastEntry.selectedPersonId = selectedPersonId;
+        lastEntry.count = stats.count;
+        lastEntry.genCount = stats.genCount;
+      } else {
+        book.history.push({
+          id: 'h_' + now + '_' + Math.floor(Math.random() * 1000),
+          action: actionDesc,
+          mergeKey: mergeKey || null,
+          timestamp: now,
+          timeStr: formatTimeStr(now),
+          peopleSnapshot: clonePeopleSnapshot(book.people),
+          selectedPersonId: selectedPersonId,
+          count: stats.count,
+          genCount: stats.genCount
+        });
+
+        if (book.history.length > MAX_HISTORY_STEPS) {
+          book.history.shift();
+        }
+      }
+
+      book.historyCursor = book.history.length - 1;
+      saveStore();
+      updateHistoryButtonsUI();
+    }
+
+    // 回退上一步 (Undo)
+    function undoAction() {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      ensureBookHistoryInitialized(book);
+
+      if (book.historyCursor <= 0) {
+        showToast('已是最早一步，无法继续回退');
+        return;
+      }
+
+      book.historyCursor -= 1;
+      const targetEntry = book.history[book.historyCursor];
+      book.people = clonePeopleSnapshot(targetEntry.peopleSnapshot);
+      selectedPersonId = targetEntry.selectedPersonId && book.people[targetEntry.selectedPersonId]
+        ? targetEntry.selectedPersonId
+        : Object.keys(book.people)[0] || null;
+
+      saveStore();
+      renderAll();
+      if (!document.getElementById('historyModal').classList.contains('hidden')) {
+        renderHistoryModalList();
+      }
+      showToast(`↩️ 已回退至：${targetEntry.action} (${targetEntry.timeStr})`);
+    }
+
+    // 重做下一步 (Redo)
+    function redoAction() {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      ensureBookHistoryInitialized(book);
+
+      if (book.historyCursor >= book.history.length - 1) {
+        showToast('已是最新一步，无需重做');
+        return;
+      }
+
+      book.historyCursor += 1;
+      const targetEntry = book.history[book.historyCursor];
+      book.people = clonePeopleSnapshot(targetEntry.peopleSnapshot);
+      selectedPersonId = targetEntry.selectedPersonId && book.people[targetEntry.selectedPersonId]
+        ? targetEntry.selectedPersonId
+        : Object.keys(book.people)[0] || null;
+
+      saveStore();
+      renderAll();
+      if (!document.getElementById('historyModal').classList.contains('hidden')) {
+        renderHistoryModalList();
+      }
+      showToast(`↪️ 已重做：${targetEntry.action} (${targetEntry.timeStr})`);
+    }
+
+    // 时光机：直接回退/跳转到历史记录中的任意指定步骤 index
+    function rollbackToStep(index) {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      ensureBookHistoryInitialized(book);
+
+      if (index < 0 || index >= book.history.length) return;
+      if (index === book.historyCursor) {
+        showToast('当前已经处于该步骤状态');
+        return;
+      }
+
+      const targetEntry = book.history[index];
+      book.historyCursor = index;
+      book.people = clonePeopleSnapshot(targetEntry.peopleSnapshot);
+      selectedPersonId = targetEntry.selectedPersonId && book.people[targetEntry.selectedPersonId]
+        ? targetEntry.selectedPersonId
+        : Object.keys(book.people)[0] || null;
+
+      saveStore();
+      renderAll();
+      renderHistoryModalList();
+      showToast(`⏪ 已成功回退到第 ${index + 1} 步：「${targetEntry.action}」`);
+    }
+
+    function clearHistoryLogs() {
+      if (!ensureAdminPermission()) return;
+      if (!confirm('确定要清空早期的修改记录吗？（当前族谱画面与数据会完整保留）')) return;
+      const book = getCurrentBook();
+      const stats = computeSnapshotStats(book.people);
+      book.history = [{
+        id: 'h_reset_' + Date.now(),
+        action: '清空旧记录后的基准状态',
+        timestamp: Date.now(),
+        timeStr: formatTimeStr(),
+        peopleSnapshot: clonePeopleSnapshot(book.people),
+        selectedPersonId: selectedPersonId,
+        count: stats.count,
+        genCount: stats.genCount
+      }];
+      book.historyCursor = 0;
+      saveStore();
+      updateHistoryButtonsUI();
+      renderHistoryModalList();
+      showToast('已清理早期历史记录');
+    }
+
+    function updateHistoryButtonsUI() {
+      const book = getCurrentBook();
+      ensureBookHistoryInitialized(book);
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      const badge = document.getElementById('historyCountBadge');
+
+      if (undoBtn) undoBtn.disabled = book.historyCursor <= 0;
+      if (redoBtn) redoBtn.disabled = book.historyCursor >= book.history.length - 1;
+      if (badge) badge.textContent = book.history.length;
+    }
+
+    function openHistoryModal() {
+      renderHistoryModalList();
+      document.getElementById('historyModal').classList.remove('hidden');
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyModal').classList.add('hidden');
+    }
+
+    function renderHistoryModalList() {
+      const book = getCurrentBook();
+      ensureBookHistoryInitialized(book);
+      const container = document.getElementById('historyTimelineList');
+      if (!container) return;
+
+      // 倒序显示（最新操作在最上方）
+      const itemsHtml = [];
+      for (let i = book.history.length - 1; i >= 0; i--) {
+        const item = book.history[i];
+        const isCurrent = i === book.historyCursor;
+        const isFuture = i > book.historyCursor;
+
+        itemsHtml.push(`
+          <div class="py-2.5 px-3 rounded-lg flex items-center justify-between gap-3 transition ${isCurrent ? 'bg-amber-50 border border-[#9e2a2b]' : 'hover:bg-stone-50'}">
+            <div class="flex items-start gap-2.5 min-w-0">
+              <div class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold mt-0.5 ${isCurrent ? 'bg-[#9e2a2b] text-white' : (isFuture ? 'bg-stone-200 text-stone-500' : 'bg-stone-800 text-amber-100')}">
+                ${i + 1}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-bold text-xs ${isCurrent ? 'text-[#9e2a2b]' : (isFuture ? 'text-stone-400 line-through' : 'text-stone-800')}">
+                    ${escapeHtml(item.action)}
+                  </span>
+                  ${isCurrent ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-[#9e2a2b] text-white font-semibold">当前所处状态</span>' : ''}
+                  ${isFuture ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-stone-200 text-stone-600">已撤销步骤</span>' : ''}
+                </div>
+                <div class="text-[11px] text-stone-400 mt-0.5 flex items-center gap-3">
+                  <span><i class="fa-regular fa-clock mr-1"></i>${escapeHtml(item.timeStr || '')}</span>
+                  <span>共 ${item.genCount || 1} 世 · ${item.count || 1} 位族人</span>
+                </div>
+              </div>
+            </div>
+            <div class="shrink-0">
+              ${!isCurrent ? `
+                <button onclick="rollbackToStep(${i})" class="px-2.5 py-1 rounded text-xs font-medium ${isFuture ? 'bg-stone-700 hover:bg-stone-600 text-white' : 'bg-[#9e2a2b] hover:bg-[#822021] text-white'} shadow-sm transition">
+                  ${isFuture ? '↪️ 恢复到此步' : '⏪ 回退到此步'}
+                </button>
+              ` : `
+                <span class="text-[11px] text-emerald-700 font-semibold px-2"><i class="fa-solid fa-check mr-0.5"></i>使用中</span>
+              `}
+            </div>
+          </div>
+        `);
+      }
+
+      container.innerHTML = itemsHtml.join('');
+    }
+
+    function saveStore() {
+      try {
+        store.updatedAt = Date.now();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+        const ind = document.getElementById('autoSaveIndicator');
+        if (ind) {
+          ind.innerHTML = `<i class="fa-solid fa-cloud-check"></i>已自动保存 (${formatTimeStr()})`;
+        }
+      } catch (e) {}
+    }
+
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.books && Object.keys(parsed.books).length > 0) {
+            store = parsed;
+            if (!store.adminPwdHash) store.adminPwdHash = simpleHash('888888');
+          }
+        } else if (EMBEDDED_DEFAULT_STORE && EMBEDDED_DEFAULT_STORE.books) {
+          store = JSON.parse(JSON.stringify(EMBEDDED_DEFAULT_STORE));
+          saveStore();
+        } else {
+          const demo = createDemoBook();
+          store.books[demo.id] = demo;
+          store.activeBookId = demo.id;
+          saveStore();
+        }
+      } catch (e) {
+        const demo = createDemoBook();
+        store.books[demo.id] = demo;
+        store.activeBookId = demo.id;
+      }
+
+      ensureBookHistoryInitialized(getCurrentBook());
+
+      const sessionUnlocked = sessionStorage.getItem(AUTH_SESSION_KEY);
+      if (sessionUnlocked === '1') {
+        isAdminUnlocked = true;
+      } else if (sessionUnlocked === '0') {
+        isAdminUnlocked = false;
+      } else {
+        isAdminUnlocked = EMBEDDED_DEFAULT_STORE ? false : true;
+      }
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      const text = document.getElementById('toastText');
+      text.innerHTML = `<i class="fa-solid fa-circle-check text-amber-400"></i><span>${msg}</span>`;
+      box.classList.remove('opacity-0', '-translate-y-2');
+      box.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        box.classList.add('opacity-0', '-translate-y-2');
+        box.classList.remove('opacity-100', 'translate-y-0');
+      }, 2600);
+    }
+
+    function ensureAdminPermission() {
+      if (!isAdminUnlocked) {
+        openAuthModal('login');
+        return false;
+      }
+      return true;
+    }
+
+    /********************************************************************
+     * 三、随时随地自由新增任意族人
+     ********************************************************************/
+    function openStandalonePersonModal(defaultGen) {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      const curr = selectedPersonId ? book.people[selectedPersonId] : null;
+
+      document.getElementById('freePersonName').value = '';
+      document.getElementById('freePersonGender').value = 'M';
+      document.getElementById('freePersonGen').value = defaultGen || (curr ? curr.generation : 1);
+      document.getElementById('freePersonBirth').value = '';
+      document.getElementById('freePersonTitle').value = '';
+      document.getElementById('freePersonLinkType').value = 'none';
+
+      const targetSelect = document.getElementById('freePersonTargetId');
+      const allPeople = Object.values(book.people).sort((a, b) => (a.generation || 1) - (b.generation || 1));
+      targetSelect.innerHTML = allPeople.map(p =>
+        `<option value="${p.id}" ${p.id === selectedPersonId ? 'selected' : ''}>第${p.generation}世 · ${escapeHtml(p.name)}</option>`
+      ).join('');
+
+      toggleFreePersonTargetSelect();
+      document.getElementById('standalonePersonModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('freePersonName').focus(), 60);
+    }
+
+    function closeStandalonePersonModal() {
+      document.getElementById('standalonePersonModal').classList.add('hidden');
+    }
+
+    function toggleFreePersonTargetSelect() {
+      const linkType = document.getElementById('freePersonLinkType').value;
+      const targetSelect = document.getElementById('freePersonTargetId');
+      if (linkType === 'none') {
+        targetSelect.classList.add('hidden');
+      } else {
+        targetSelect.classList.remove('hidden');
+      }
+    }
+
+    function confirmAddStandalonePerson() {
+      if (!ensureAdminPermission()) return;
+      const name = document.getElementById('freePersonName').value.trim();
+      if (!name) {
+        showToast('请输入新族人姓名');
+        return;
+      }
+      const gender = document.getElementById('freePersonGender').value;
+      const gen = Math.max(1, parseInt(document.getElementById('freePersonGen').value, 10) || 1);
+      const birthYear = document.getElementById('freePersonBirth').value.trim();
+      const title = document.getElementById('freePersonTitle').value.trim();
+      const linkType = document.getElementById('freePersonLinkType').value;
+      const targetId = document.getElementById('freePersonTargetId').value;
+
+      const book = getCurrentBook();
+      const people = book.people;
+      const newId = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
+      const newPerson = {
+        id: newId,
+        name,
+        courtesy: '',
+        title,
+        gender,
+        generation: gen,
+        birthYear,
+        deathYear: '今',
+        bio: '',
+        fatherId: null,
+        motherId: null,
+        spouseIds: [],
+        childrenIds: []
+      };
+      people[newId] = newPerson;
+      selectedPersonId = newId;
+
+      if (linkType === 'as_child' && targetId && people[targetId]) {
+        const parentName = people[targetId].name;
+        bindParentChildRelation(targetId, newId, 'child', false);
+        recordHistoryStep(`新增族人「${name}」并设为「${parentName}」的子女`);
+        showToast(`已新增「${name}」并归入「${parentName}」下方`);
+      } else if (linkType === 'as_parent' && targetId && people[targetId]) {
+        const childName = people[targetId].name;
+        bindParentChildRelation(newId, targetId, 'parent', false);
+        recordHistoryStep(`新增族人「${name}」并设为「${childName}」的父母`);
+        showToast(`已新增「${name}」并置于「${childName}」上方`);
+      } else if (linkType === 'as_spouse' && targetId && people[targetId]) {
+        const t = people[targetId];
+        newPerson.generation = t.generation || 1;
+        if (!t.spouseIds.includes(newId)) t.spouseIds.push(newId);
+        newPerson.spouseIds.push(t.id);
+        recordHistoryStep(`新增族人「${name}」并设为「${t.name}」的配偶`);
+        renderAll();
+        showToast(`已新增「${name}」并与「${t.name}」并列同世`);
+      } else {
+        recordHistoryStep(`自由新增第 ${gen} 世族人「${name}」`);
+        renderAll();
+        showToast(`已成功新增第 ${gen} 世独立族人「${name}」`);
+      }
+
+      closeStandalonePersonModal();
+    }
+
+    /********************************************************************
+     * 四、修改第几世后，全家族自动级联重算世代与排序
+     ********************************************************************/
+    function propagateGenerationsFrom(anchorId, targetGen, autoNormalizeToOne = false) {
+      const book = getCurrentBook();
+      const people = book.people;
+      const anchor = people[anchorId];
+      if (!anchor) return;
+
+      const parsedGen = parseInt(targetGen, 10);
+      if (isNaN(parsedGen) || parsedGen < 1) {
+        showToast('请输入大于等于 1 的有效世次');
+        return;
+      }
+
+      const visited = new Set();
+      const queue = [{ id: anchorId, gen: parsedGen }];
+      visited.add(anchorId);
+
+      while (queue.length > 0) {
+        const { id, gen } = queue.shift();
+        const person = people[id];
+        if (!person) continue;
+        person.generation = gen;
+
+        (person.spouseIds || []).forEach(spId => {
+          if (people[spId] && !visited.has(spId)) {
+            visited.add(spId);
+            queue.push({ id: spId, gen: gen });
+          }
+        });
+
+        [person.fatherId, person.motherId].forEach(pid => {
+          if (pid && people[pid] && !visited.has(pid)) {
+            visited.add(pid);
+            queue.push({ id: pid, gen: gen - 1 });
+          }
+        });
+
+        (person.childrenIds || []).forEach(cid => {
+          if (people[cid] && !visited.has(cid)) {
+            visited.add(cid);
+            queue.push({ id: cid, gen: gen + 1 });
+          }
+        });
+      }
+
+      let minGen = Infinity;
+      Object.values(people).forEach(p => {
+        if (p.generation < minGen) minGen = p.generation;
+      });
+
+      if (minGen < 1 || autoNormalizeToOne) {
+        const shift = 1 - minGen;
+        if (shift !== 0) {
+          Object.values(people).forEach(p => {
+            p.generation += shift;
+          });
+        }
+      }
+
+      saveStore();
+      renderAll();
+    }
+
+    function stepGeneration(step) {
+      if (!ensureAdminPermission() || !selectedPersonId) return;
+      const book = getCurrentBook();
+      const p = book.people[selectedPersonId];
+      if (!p) return;
+      const nextGen = Math.max(1, (p.generation || 1) + step);
+      document.getElementById('fieldGenInput').value = nextGen;
+      applyGenerationChange(nextGen);
+    }
+
+    function applyGenerationChange(val) {
+      if (!ensureAdminPermission() || !selectedPersonId) return;
+      const nextGen = parseInt(val, 10);
+      if (isNaN(nextGen) || nextGen < 1) {
+        showToast('世代必须为正整数（如第 1 世、第 2 世）');
+        return;
+      }
+      propagateGenerationsFrom(selectedPersonId, nextGen, false);
+      const updatedPerson = getCurrentBook().people[selectedPersonId];
+      recordHistoryStep(`将「${updatedPerson.name}」世次调整为第 ${updatedPerson.generation} 世（全谱联动重排）`);
+      showToast(`已将「${updatedPerson.name}」设为第 ${updatedPerson.generation} 世，关联族人已自动联动排序`);
+    }
+
+    /********************************************************************
+     * 五、绑定/更换父母或子女，自动归到上方或下方
+     ********************************************************************/
+    function isDescendantOf(potentialDescendantId, personId, people) {
+      const visited = new Set();
+      const stack = [...(people[personId]?.childrenIds || [])];
+      while (stack.length > 0) {
+        const curr = stack.pop();
+        if (curr === potentialDescendantId) return true;
+        if (!visited.has(curr) && people[curr]) {
+          visited.add(curr);
+          stack.push(...(people[curr].childrenIds || []));
+        }
+      }
+      return false;
+    }
+
+    function bindParentChildRelation(parentId, childId, adjustTarget = 'child', shouldLogHistory = true) {
+      const book = getCurrentBook();
+      const people = book.people;
+      const parent = people[parentId];
+      const child = people[childId];
+      if (!parent || !child || parentId === childId) return false;
+
+      if (isDescendantOf(parentId, childId, people)) {
+        showToast('操作无效：不能将自己的晚辈/子孙设为自己的父母');
+        return false;
+      }
+
+      if (parent.gender === 'F') {
+        if (child.motherId && people[child.motherId]) {
+          people[child.motherId].childrenIds = (people[child.motherId].childrenIds || []).filter(id => id !== childId);
+        }
+        child.motherId = parentId;
+        if (!child.fatherId && parent.spouseIds && parent.spouseIds.length > 0) {
+          const sp = people[parent.spouseIds[0]];
+          if (sp && sp.gender === 'M') {
+            child.fatherId = sp.id;
+            if (!sp.childrenIds.includes(childId)) sp.childrenIds.push(childId);
+          }
+        }
+      } else {
+        if (child.fatherId && people[child.fatherId]) {
+          people[child.fatherId].childrenIds = (people[child.fatherId].childrenIds || []).filter(id => id !== childId);
+        }
+        child.fatherId = parentId;
+        if (!child.motherId && parent.spouseIds && parent.spouseIds.length > 0) {
+          const sp = people[parent.spouseIds[0]];
+          if (sp && sp.gender === 'F') {
+            child.motherId = sp.id;
+            if (!sp.childrenIds.includes(childId)) sp.childrenIds.push(childId);
+          }
+        }
+      }
+
+      if (!parent.childrenIds) parent.childrenIds = [];
+      if (!parent.childrenIds.includes(childId)) {
+        parent.childrenIds.push(childId);
+      }
+
+      if (adjustTarget === 'parent') {
+        const targetParentGen = Math.max(1, (child.generation || 2) - 1);
+        propagateGenerationsFrom(parentId, targetParentGen, false);
+      } else {
+        propagateGenerationsFrom(childId, (parent.generation || 1) + 1, false);
+      }
+
+      if (shouldLogHistory) {
+        recordHistoryStep(`绑定「${parent.name}」为「${child.name}」的父母`);
+      }
+      saveStore();
+      renderAll();
+      return true;
+    }
+
+    function unbindParent(childId, role) {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      const people = book.people;
+      const child = people[childId];
+      if (!child) return;
+
+      const pid = role === 'father' ? child.fatherId : child.motherId;
+      const parentName = pid && people[pid] ? people[pid].name : (role === 'father' ? '父亲' : '母亲');
+      if (pid && people[pid]) {
+        people[pid].childrenIds = (people[pid].childrenIds || []).filter(id => id !== childId);
+      }
+      if (role === 'father') child.fatherId = null;
+      else child.motherId = null;
+
+      recordHistoryStep(`解除「${child.name}」与父母「${parentName}」的关联`);
+      renderAll();
+      showToast('已解除该父母关联');
+    }
+
+    function unbindChild(parentId, childId) {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      const people = book.people;
+      const parent = people[parentId];
+      const child = people[childId];
+      if (!parent || !child) return;
+
+      parent.childrenIds = (parent.childrenIds || []).filter(id => id !== childId);
+      if (child.fatherId === parentId) child.fatherId = null;
+      if (child.motherId === parentId) child.motherId = null;
+
+      (parent.spouseIds || []).forEach(spId => {
+        const sp = people[spId];
+        if (sp) {
+          sp.childrenIds = (sp.childrenIds || []).filter(id => id !== childId);
+          if (child.fatherId === spId) child.fatherId = null;
+          if (child.motherId === spId) child.motherId = null;
+        }
+      });
+
+      recordHistoryStep(`解除「${parent.name}」与子女「${child.name}」的从属关系`);
+      renderAll();
+      showToast(`已解除与「${child.name}」的父子/母子从属`);
+    }
+
+    /********************************************************************
+     * 六、传统宗谱「自右向左（以右为尊、老大在最右、最小在最左）」布局引擎
+     ********************************************************************/
+    const CARD_W = 158;
+    const CARD_H = 92;
+    const SPOUSE_GAP = 22;
+    const SIBLING_GAP = 42;
+    const GEN_ROW_H = 178;
+
+    function computeFamilyTreeLayout(people) {
+      const allIds = Object.keys(people);
+      if (allIds.length === 0) return { positions: {}, bounds: { minX: 0, maxX: 800, minY: 0, maxY: 600 }, genRows: [] };
+
+      const isAttachedSpouse = new Set();
+      const primarySpouseMap = {};
+
+      allIds.forEach(id => {
+        const p = people[id];
+        if (!p || isAttachedSpouse.has(id)) return;
+        const spouses = (p.spouseIds || []).filter(sid => people[sid]);
+        if (spouses.length > 0) {
+          const pHasParents = !!(p.fatherId || p.motherId);
+          spouses.forEach(sid => {
+            const sp = people[sid];
+            const spHasParents = !!(sp.fatherId || sp.motherId);
+            if (!spHasParents && (pHasParents || p.gender === 'M' || id < sid)) {
+              if (!isAttachedSpouse.has(sid) && !primarySpouseMap[sid]) {
+                isAttachedSpouse.add(sid);
+                if (!primarySpouseMap[id]) primarySpouseMap[id] = [];
+                primarySpouseMap[id].push(sid);
+              }
+            }
+          });
+        }
+      });
+
+      function getUnitWidth(id) {
+        const spCount = (primarySpouseMap[id] || []).length;
+        return CARD_W + spCount * (CARD_W + SPOUSE_GAP);
+      }
+
+      function getOrderedChildren(id) {
+        const p = people[id];
+        if (!p) return [];
+        const ordered = [];
+        const seen = new Set();
+        (p.childrenIds || []).forEach(cid => {
+          if (people[cid] && !isAttachedSpouse.has(cid) && !seen.has(cid)) {
+            seen.add(cid);
+            ordered.push(cid);
+          }
+        });
+        (primarySpouseMap[id] || []).forEach(sid => {
+          const sp = people[sid];
+          (sp?.childrenIds || []).forEach(cid => {
+            if (people[cid] && !isAttachedSpouse.has(cid) && !seen.has(cid)) {
+              seen.add(cid);
+              ordered.push(cid);
+            }
+          });
+        });
+        return ordered;
+      }
+
+      const subtreeWidthMap = {};
+      const visiting = new Set();
+      function calcSubtreeWidth(id) {
+        if (subtreeWidthMap[id] !== undefined) return subtreeWidthMap[id];
+        if (visiting.has(id)) return getUnitWidth(id);
+        visiting.add(id);
+
+        const unitW = getUnitWidth(id);
+        const children = getOrderedChildren(id);
+        if (children.length === 0) {
+          subtreeWidthMap[id] = unitW;
+          visiting.delete(id);
+          return unitW;
+        }
+        let childrenTotalW = 0;
+        children.forEach((cid, idx) => {
+          childrenTotalW += calcSubtreeWidth(cid);
+          if (idx < children.length - 1) childrenTotalW += SIBLING_GAP;
+        });
+        const w = Math.max(unitW, childrenTotalW);
+        subtreeWidthMap[id] = w;
+        visiting.delete(id);
+        return w;
+      }
+
+      const rootIds = allIds.filter(id => {
+        if (isAttachedSpouse.has(id)) return false;
+        const p = people[id];
+        const hasFather = p.fatherId && people[p.fatherId];
+        const hasMother = p.motherId && people[p.motherId];
+        return !hasFather && !hasMother;
+      }).sort((a, b) => {
+        const ga = people[a].generation || 1;
+        const gb = people[b].generation || 1;
+        if (ga !== gb) return ga - gb;
+        return (parseInt(people[a].birthYear) || 9999) - (parseInt(people[b].birthYear) || 9999);
+      });
+
+      rootIds.forEach(rid => calcSubtreeWidth(rid));
+
+      let minGen = Infinity;
+      let maxGen = -Infinity;
+      allIds.forEach(id => {
+        const g = people[id].generation || 1;
+        if (g < minGen) minGen = g;
+        if (g > maxGen) maxGen = g;
+      });
+      if (!isFinite(minGen)) { minGen = 1; maxGen = 1; }
+
+      const positions = {};
+      const placed = new Set();
+
+      function placeSubtree(id, leftX) {
+        if (placed.has(id)) return;
+        placed.add(id);
+
+        const p = people[id];
+        const subW = subtreeWidthMap[id] || getUnitWidth(id);
+        const unitW = getUnitWidth(id);
+        const gen = p.generation || 1;
+        const y = 80 + (gen - minGen) * GEN_ROW_H;
+
+        const unitStartX = leftX + (subW - unitW) / 2;
+        const unitRightEdge = unitStartX + unitW;
+
+        positions[id] = { x: unitRightEdge - CARD_W, y, gen };
+
+        const spouses = primarySpouseMap[id] || [];
+        spouses.forEach((sid, idx) => {
+          placed.add(sid);
+          const spGen = people[sid].generation || gen;
+          const spY = 80 + (spGen - minGen) * GEN_ROW_H;
+          positions[sid] = {
+            x: unitRightEdge - CARD_W - (idx + 1) * (CARD_W + SPOUSE_GAP),
+            y: spY,
+            gen: spGen
+          };
+        });
+
+        const children = getOrderedChildren(id);
+        if (children.length > 0) {
+          let totalChildrenW = 0;
+          children.forEach((cid, i) => {
+            totalChildrenW += (subtreeWidthMap[cid] || getUnitWidth(cid));
+            if (i < children.length - 1) totalChildrenW += SIBLING_GAP;
+          });
+          let childRightCursor = leftX + (subW + totalChildrenW) / 2;
+          children.forEach(cid => {
+            const cw = subtreeWidthMap[cid] || getUnitWidth(cid);
+            const childLeftX = childRightCursor - cw;
+            placeSubtree(cid, childLeftX);
+            childRightCursor = childLeftX - SIBLING_GAP;
+          });
+        }
+      }
+
+      let totalRootsW = 0;
+      rootIds.forEach((rid, idx) => {
+        totalRootsW += (subtreeWidthMap[rid] || getUnitWidth(rid));
+        if (idx < rootIds.length - 1) totalRootsW += SIBLING_GAP * 1.5;
+      });
+
+      let rootRightCursor = 160 + totalRootsW;
+      rootIds.forEach(rid => {
+        const w = subtreeWidthMap[rid] || getUnitWidth(rid);
+        const rLeft = rootRightCursor - w;
+        placeSubtree(rid, rLeft);
+        rootRightCursor = rLeft - SIBLING_GAP * 1.5;
+      });
+
+      let fallbackX = 160 + totalRootsW + SIBLING_GAP * 1.5;
+      allIds.forEach(id => {
+        if (!placed.has(id)) {
+          const p = people[id];
+          const gen = p.generation || 1;
+          positions[id] = { x: fallbackX, y: 80 + (gen - minGen) * GEN_ROW_H, gen };
+          fallbackX += CARD_W + SIBLING_GAP;
+        }
+      });
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      Object.values(positions).forEach(pos => {
+        if (pos.x < minX) minX = pos.x;
+        if (pos.x + CARD_W > maxX) maxX = pos.x + CARD_W;
+        if (pos.y < minY) minY = pos.y;
+        if (pos.y + CARD_H > maxY) maxY = pos.y + CARD_H;
+      });
+
+      const genRows = [];
+      for (let g = minGen; g <= maxGen; g++) {
+        genRows.push({
+          gen: g,
+          y: 80 + (g - minGen) * GEN_ROW_H
+        });
+      }
+
+      return { positions, bounds: { minX, maxX, minY, maxY }, genRows };
+    }
+
+    function getBirthOrderDetail(person, people) {
+      const parent = (person.fatherId && people[person.fatherId]) || (person.motherId && people[person.motherId]);
+      if (!parent || !parent.childrenIds || parent.childrenIds.length === 0) {
+        const label = person.generation === 1 ? '始祖' : `第${person.generation}世`;
+        return {
+          hasParent: false,
+          overallNum: 1,
+          totalSiblings: 1,
+          overallText: '',
+          genderText: label,
+          combinedBadge: label
+        };
+      }
+
+      const cnOrder = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+      const cnRank = ['长', '次', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+      const allSiblings = parent.childrenIds.map(id => people[id]).filter(Boolean);
+      const overallIdx = allSiblings.findIndex(c => c.id === person.id);
+
+      const sameGenderSiblings = allSiblings.filter(c => c.gender === person.gender);
+      const genderIdx = sameGenderSiblings.findIndex(c => c.id === person.id);
+
+      if (overallIdx === -1) {
+        const fallback = `第${person.generation}世`;
+        return { hasParent: false, overallNum: 1, totalSiblings: 1, overallText: '', genderText: fallback, combinedBadge: fallback };
+      }
+
+      const overallText = `排${cnOrder[overallIdx] || (overallIdx + 1)}`;
+      const genderPrefix = cnRank[genderIdx] || `${genderIdx + 1}`;
+      const genderText = person.gender === 'F' ? `${genderPrefix}女` : `${genderPrefix}子`;
+
+      return {
+        hasParent: true,
+        overallNum: overallIdx + 1,
+        totalSiblings: allSiblings.length,
+        overallText,
+        genderText,
+        combinedBadge: `${overallText}·${genderText}`
+      };
+    }
+
+    function getBirthOrderBadge(person, people) {
+      return getBirthOrderDetail(person, people).combinedBadge;
+    }
+
+    /********************************************************************
+     * 七、渲染画布、权限状态与右侧面板
+     ********************************************************************/
+    function renderAll() {
+      const book = getCurrentBook();
+      const people = book.people;
+      const allList = Object.values(people);
+
+      if (!selectedPersonId || !people[selectedPersonId]) {
+        selectedPersonId = allList[0]?.id || null;
+      }
+
+      document.getElementById('currentBookTitle').textContent = book.name || '未命名宗谱';
+      document.getElementById('currentBookHall').textContent = book.hall || '传家堂';
+      const gens = new Set(allList.map(p => p.generation || 1));
+      document.getElementById('statsBar').textContent = `共 ${gens.size} 世 · ${allList.length} 位族人`;
+
+      renderAuthPermissionsUI();
+      updateHistoryButtonsUI();
+      const layout = computeFamilyTreeLayout(people);
+      renderCanvasNodesAndLines(people, layout);
+      renderInspectorPanel();
+    }
+
+    function renderAuthPermissionsUI() {
+      const authArea = document.getElementById('authStatusArea');
+      const readonlyBanner = document.getElementById('readonlyBanner');
+
+      if (isAdminUnlocked) {
+        authArea.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] bg-emerald-900/60 text-emerald-300 border border-emerald-600/50 px-2 py-1 rounded flex items-center gap-1">
+              <i class="fa-solid fa-unlock-keyhole"></i>管理员
+            </span>
+            <button onclick="openAuthModal('change')" class="text-xs bg-stone-700 hover:bg-stone-600 text-amber-200 px-2 py-1 rounded border border-stone-600 transition" title="修改管理员密码">
+              改密
+            </button>
+            <button onclick="lockAdminSession()" class="text-xs bg-stone-800 hover:bg-stone-700 text-stone-300 px-2 py-1 rounded border border-stone-700 transition" title="切换回宗亲只读浏览模式">
+              锁定
+            </button>
+          </div>
+        `;
+        readonlyBanner.classList.add('hidden');
+      } else {
+        authArea.innerHTML = `
+          <button onclick="openAuthModal('login')" class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-1.5 rounded shadow font-medium flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-lock"></i>
+            <span>管理员解锁编辑</span>
+          </button>
+        `;
+        readonlyBanner.classList.remove('hidden');
+      }
+
+      document.querySelectorAll('.admin-only-btn, .admin-only-block').forEach(el => {
+        if (isAdminUnlocked) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+      document.querySelectorAll('.admin-edit-control').forEach(el => {
+        el.disabled = !isAdminUnlocked;
+      });
+    }
+
+    function renderCanvasNodesAndLines(people, layout) {
+      const nodesLayer = document.getElementById('nodesLayer');
+      const svg = document.getElementById('connectionsSvg');
+      nodesLayer.innerHTML = '';
+      svg.innerHTML = '';
+
+      const { positions, bounds, genRows } = layout;
+
+      const bandLeft = Math.min(40, bounds.minX - 120);
+      const bandRight = Math.max(1100, bounds.maxX + 140);
+      const bandWidth = bandRight - bandLeft;
+
+      genRows.forEach((row, idx) => {
+        const band = document.createElement('div');
+        band.className = 'absolute pointer-events-none flex items-center justify-between px-3';
+        band.style.left = `${bandLeft}px`;
+        band.style.top = `${row.y - 18}px`;
+        band.style.width = `${bandWidth}px`;
+        band.style.height = `${CARD_H + 36}px`;
+        band.style.borderBottom = '1px dashed rgba(176, 137, 104, 0.28)';
+        if (idx % 2 === 1) {
+          band.style.backgroundColor = 'rgba(229, 222, 201, 0.22)';
+        }
+
+        const addBtnHtml = isAdminUnlocked ? `
+          <button onclick="openStandalonePersonModal(${row.gen})" class="w-6 h-6 rounded-full bg-white/90 hover:bg-[#9e2a2b] text-stone-700 hover:text-white border border-stone-300 shadow-sm flex items-center justify-center text-xs transition" title="直接在此世代新增一位族人">
+            <i class="fa-solid fa-plus text-[10px]"></i>
+          </button>
+        ` : '';
+
+        band.innerHTML = `
+          <div class="flex items-center gap-1.5 pointer-events-auto">
+            <div class="px-2.5 py-1 rounded bg-[#2c2623] text-amber-100 serif-title text-xs font-bold shadow border border-amber-500/40 tracking-widest">
+              第 ${row.gen} 世
+            </div>
+            ${addBtnHtml}
+          </div>
+          <div class="flex items-center gap-1.5 pointer-events-auto">
+            ${addBtnHtml}
+            <div class="px-2.5 py-1 rounded bg-[#9e2a2b] text-amber-100 serif-title text-xs font-bold shadow border border-amber-300/40 tracking-widest">
+              第 ${row.gen} 世 (右起居长)
+            </div>
+          </div>
+        `;
+        nodesLayer.appendChild(band);
+      });
+
+      let svgHtml = '';
+
+      const drawnSpousePairs = new Set();
+      Object.values(people).forEach(p => {
+        const posA = positions[p.id];
+        if (!posA) return;
+        (p.spouseIds || []).forEach(sid => {
+          const pairKey = [p.id, sid].sort().join('--');
+          if (drawnSpousePairs.has(pairKey)) return;
+          const posB = positions[sid];
+          if (!posB) return;
+          drawnSpousePairs.add(pairKey);
+
+          const x1 = posA.x + CARD_W / 2;
+          const y1 = posA.y + CARD_H / 2;
+          const x2 = posB.x + CARD_W / 2;
+          const y2 = posB.y + CARD_H / 2;
+          svgHtml += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#d66853" stroke-width="2" stroke-dasharray="5,4" />`;
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          svgHtml += `<circle cx="${midX}" cy="${midY}" r="7" fill="#fdfbf7" stroke="#d66853" stroke-width="1.5" />`;
+          svgHtml += `<text x="${midX}" y="${midY + 3.5}" text-anchor="middle" font-size="9" fill="#d66853">合</text>`;
+        });
+      });
+
+      Object.values(people).forEach(child => {
+        const childPos = positions[child.id];
+        if (!childPos) return;
+        const fPos = child.fatherId ? positions[child.fatherId] : null;
+        const mPos = child.motherId ? positions[child.motherId] : null;
+        if (!fPos && !mPos) return;
+
+        let startX, startY;
+        if (fPos && mPos) {
+          startX = (fPos.x + mPos.x + CARD_W) / 2;
+          startY = (fPos.y + mPos.y) / 2 + CARD_H / 2;
+        } else if (fPos) {
+          startX = fPos.x + CARD_W / 2;
+          startY = fPos.y + CARD_H;
+        } else {
+          startX = mPos.x + CARD_W / 2;
+          startY = mPos.y + CARD_H;
+        }
+
+        const endX = childPos.x + CARD_W / 2;
+        const endY = childPos.y;
+        const midY = startY + (endY - startY) * 0.52;
+
+        svgHtml += `
+          <path d="M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY}"
+                fill="none" stroke="#9c7a54" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="${endX}" cy="${endY}" r="3.5" fill="#9e2a2b" />
+        `;
+      });
+
+      svg.innerHTML = svgHtml;
+
+      Object.values(people).forEach(person => {
+        const pos = positions[person.id];
+        if (!pos) return;
+
+        const isSelected = person.id === selectedPersonId;
+        const isMale = person.gender !== 'F';
+        const topBarColor = isMale ? 'bg-[#3b5975]' : 'bg-[#a84255]';
+        const detail = getBirthOrderDetail(person, people);
+
+        const card = document.createElement('div');
+        card.className = `person-card absolute bg-[#fffdf9] rounded-lg border ${isSelected ? 'selected border-[#9e2a2b]' : 'border-stone-300'} overflow-hidden cursor-pointer select-none`;
+        card.style.width = `${CARD_W}px`;
+        card.style.height = `${CARD_H}px`;
+        card.style.left = `${pos.x}px`;
+        card.style.top = `${pos.y}px`;
+        card.onclick = (e) => {
+          e.stopPropagation();
+          selectPerson(person.id);
+        };
+
+        card.innerHTML = `
+          <div class="h-1.5 w-full ${topBarColor}"></div>
+          <div class="p-2.5 flex flex-col justify-between h-[calc(100%-6px)]">
+            <div class="flex items-start justify-between gap-1">
+              <div class="truncate">
+                <span class="serif-title font-bold text-sm text-stone-900">${escapeHtml(person.name || '未命名')}</span>
+              </div>
+              <div class="shrink-0 flex items-center gap-0.5">
+                ${detail.hasParent ? `<span class="text-[10px] px-1 py-0.5 rounded-l font-bold bg-[#9e2a2b] text-amber-50" title="同胞长幼总排行：第${detail.overallNum}位">${escapeHtml(detail.overallText)}</span>` : ''}
+                <span class="text-[10px] px-1.5 py-0.5 ${detail.hasParent ? 'rounded-r' : 'rounded'} font-semibold ${isMale ? 'bg-slate-100 text-[#3b5975]' : 'bg-rose-50 text-[#a84255]'} border border-current/20">
+                  ${escapeHtml(detail.genderText)}
+                </span>
+              </div>
+            </div>
+            <div class="text-[11px] text-stone-500 truncate">
+              ${escapeHtml(person.courtesy || person.title || `第 ${person.generation} 世`)}
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-stone-400 border-t border-stone-100 pt-1">
+              <span>${escapeHtml(person.birthYear || '?')} — ${escapeHtml(person.deathYear || '今')}</span>
+              <span class="font-semibold text-amber-800">第${person.generation}世</span>
+            </div>
+          </div>
+        `;
+        nodesLayer.appendChild(card);
+      });
+    }
+
+    function selectPerson(id) {
+      selectedPersonId = id;
+      renderAll();
+    }
+
+    function renderInspectorPanel() {
+      const book = getCurrentBook();
+      const people = book.people;
+      const p = people[selectedPersonId];
+      if (!p) return;
+
+      document.getElementById('selectedRankTag').textContent = `第 ${p.generation || 1} 世 · ${getBirthOrderBadge(p, people)}`;
+      document.getElementById('fieldGenInput').value = p.generation || 1;
+      document.getElementById('fieldName').value = p.name || '';
+      document.getElementById('fieldGender').value = p.gender || 'M';
+      document.getElementById('fieldCourtesy').value = p.courtesy || '';
+      document.getElementById('fieldTitle').value = p.title || '';
+      document.getElementById('fieldBirth').value = p.birthYear || '';
+      document.getElementById('fieldDeath').value = p.deathYear || '';
+      document.getElementById('fieldBio').value = p.bio || '';
+
+      const father = p.fatherId ? people[p.fatherId] : null;
+      const mother = p.motherId ? people[p.motherId] : null;
+      const parentsBox = document.getElementById('currentParentsDisplay');
+      parentsBox.innerHTML = `
+        <div class="p-2 rounded border ${father ? 'bg-slate-50 border-slate-200' : 'bg-stone-50 border-dashed border-stone-200 text-stone-400'} flex items-center justify-between">
+          <div class="truncate">
+            <span class="text-[10px] text-stone-400 block">父亲</span>
+            ${father ? `<span onclick="selectPerson('${father.id}')" class="font-bold text-stone-800 hover:text-[#9e2a2b] cursor-pointer">${escapeHtml(father.name)} (第${father.generation}世)</span>` : '<span>未设置</span>'}
+          </div>
+          ${father && isAdminUnlocked ? `<button onclick="unbindParent('${p.id}', 'father')" class="text-stone-400 hover:text-red-600 ml-1" title="解除父亲关联"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </div>
+        <div class="p-2 rounded border ${mother ? 'bg-rose-50/50 border-rose-200' : 'bg-stone-50 border-dashed border-stone-200 text-stone-400'} flex items-center justify-between">
+          <div class="truncate">
+            <span class="text-[10px] text-stone-400 block">母亲</span>
+            ${mother ? `<span onclick="selectPerson('${mother.id}')" class="font-bold text-stone-800 hover:text-[#9e2a2b] cursor-pointer">${escapeHtml(mother.name)} (第${mother.generation}世)</span>` : '<span>未设置</span>'}
+          </div>
+          ${mother && isAdminUnlocked ? `<button onclick="unbindParent('${p.id}', 'mother')" class="text-stone-400 hover:text-red-600 ml-1" title="解除母亲关联"><i class="fa-solid fa-xmark"></i></button>` : ''}
+        </div>
+      `;
+
+      const childrenIds = (p.childrenIds || []).filter(cid => people[cid]);
+      document.getElementById('childrenCountBadge').textContent = childrenIds.length;
+      const listEl = document.getElementById('childrenSortList');
+
+      if (childrenIds.length === 0) {
+        listEl.innerHTML = `<div class="text-center py-3 text-stone-400 text-xs bg-stone-50 rounded border border-dashed border-stone-200">暂无膝下子女</div>`;
+      } else {
+        listEl.innerHTML = '';
+        childrenIds.forEach((cid, idx) => {
+          const child = people[cid];
+          const detail = getBirthOrderDetail(child, people);
+          const posHint = idx === 0 ? '最右(居长)' : (idx === childrenIds.length - 1 ? '最左(最幼)' : `右起第${idx + 1}`);
+          const item = document.createElement('div');
+          item.className = `flex items-center justify-between px-2.5 py-1.5 rounded bg-stone-50 hover:bg-amber-50/60 border border-stone-200 text-xs transition ${isAdminUnlocked ? 'cursor-move' : ''}`;
+          item.draggable = isAdminUnlocked;
+          item.dataset.childId = cid;
+
+          if (isAdminUnlocked) {
+            item.ondragstart = (e) => {
+              e.dataTransfer.setData('text/plain', cid);
+              item.classList.add('dragging-item');
+            };
+            item.ondragend = () => item.classList.remove('dragging-item');
+            item.ondragover = (e) => e.preventDefault();
+            item.ondrop = (e) => {
+              e.preventDefault();
+              const draggedId = e.dataTransfer.getData('text/plain');
+              reorderChild(p.id, draggedId, cid);
+            };
+          }
+
+          item.innerHTML = `
+            <div class="flex items-center gap-1.5 truncate">
+              <i class="fa-solid fa-grip-vertical text-stone-300 text-[10px]"></i>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#9e2a2b] text-white">${escapeHtml(detail.overallText)}</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${child.gender === 'F' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-800'}">${escapeHtml(detail.genderText)}</span>
+              <span onclick="selectPerson('${child.id}')" class="font-bold text-stone-800 hover:text-[#9e2a2b] cursor-pointer truncate">${escapeHtml(child.name)}</span>
+              <span class="text-[10px] text-amber-800/80">(${posHint})</span>
+            </div>
+            ${isAdminUnlocked ? `
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="moveChildStep('${p.id}', ${idx}, -1)" class="w-5 h-5 rounded hover:bg-stone-200 text-stone-600 flex items-center justify-center" title="提长一位（往右移）">
+                  <i class="fa-solid fa-arrow-up text-[10px]"></i>
+                </button>
+                <button onclick="moveChildStep('${p.id}', ${idx}, 1)" class="w-5 h-5 rounded hover:bg-stone-200 text-stone-600 flex items-center justify-center" title="顺延一位（往左移）">
+                  <i class="fa-solid fa-arrow-down text-[10px]"></i>
+                </button>
+                <button onclick="unbindChild('${p.id}', '${child.id}')" class="w-5 h-5 rounded hover:bg-red-100 text-stone-400 hover:text-red-600 flex items-center justify-center" title="解除父子/母子从属">
+                  <i class="fa-solid fa-link-slash text-[10px]"></i>
+                </button>
+              </div>
+            ` : ''}
+          `;
+          listEl.appendChild(item);
+        });
+      }
+    }
+
+    /********************************************************************
+     * 八、管理员密码验证、改密与全员网页打包发布（修复下载弹窗残留）
+     ********************************************************************/
+    function openAuthModal(mode) {
+      document.getElementById('authModal').classList.remove('hidden');
+      const loginBody = document.getElementById('authLoginBody');
+      const changeBody = document.getElementById('authChangePwdBody');
+      const title = document.getElementById('authModalTitle');
+
+      if (mode === 'change') {
+        title.innerHTML = `<i class="fa-solid fa-key mr-2"></i>修改管理员密码`;
+        loginBody.classList.add('hidden');
+        changeBody.classList.remove('hidden');
+        document.getElementById('oldPwdInput').value = '';
+        document.getElementById('newPwdInput').value = '';
+        document.getElementById('confirmPwdInput').value = '';
+      } else {
+        title.innerHTML = `<i class="fa-solid fa-user-shield mr-2"></i>管理员解锁编辑`;
+        changeBody.classList.add('hidden');
+        loginBody.classList.remove('hidden');
+        document.getElementById('loginPwdInput').value = '';
+        setTimeout(() => document.getElementById('loginPwdInput').focus(), 60);
+      }
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function confirmAdminLogin() {
+      const val = document.getElementById('loginPwdInput').value;
+      if (simpleHash(val) === (store.adminPwdHash || simpleHash('888888'))) {
+        isAdminUnlocked = true;
+        sessionStorage.setItem(AUTH_SESSION_KEY, '1');
+        closeAuthModal();
+        renderAll();
+        showToast('管理员权限已解锁，现在可以自由增删与修改族谱');
+      } else {
+        showToast('管理员密码不正确');
+      }
+    }
+
+    function lockAdminSession() {
+      isAdminUnlocked = false;
+      sessionStorage.setItem(AUTH_SESSION_KEY, '0');
+      renderAll();
+      showToast('已切换为宗亲只读浏览模式');
+    }
+
+    function confirmChangePassword() {
+      const oldVal = document.getElementById('oldPwdInput').value;
+      const newVal = document.getElementById('newPwdInput').value;
+      const confirmVal = document.getElementById('confirmPwdInput').value;
+
+      if (simpleHash(oldVal) !== (store.adminPwdHash || simpleHash('888888'))) {
+        showToast('原管理员密码不正确');
+        return;
+      }
+      if (!newVal || newVal.length < 4) {
+        showToast('新密码长度至少 4 位');
+        return;
+      }
+      if (newVal !== confirmVal) {
+        showToast('两次输入的新密码不一致');
+        return;
+      }
+      store.adminPwdHash = simpleHash(newVal);
+      saveStore();
+      closeAuthModal();
+      showToast('管理员密码已修改成功！');
+    }
+
+    function openPublishSyncModal() {
+      document.getElementById('publishSyncModal').classList.remove('hidden');
+    }
+    function closePublishSyncModal() {
+      document.getElementById('publishSyncModal').classList.add('hidden');
+    }
+
+    function closeAllModalsBeforeExport() {
+      ['publishSyncModal', 'relationModal', 'standalonePersonModal', 'authModal', 'bookModal', 'exportModal', 'historyModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+
+    function downloadBundledHtmlForGithub() {
+      // 关键修复：先隐藏所有弹窗，再抓取 HTML，杜绝下载后的网页自带弹窗遮挡！
+      closeAllModalsBeforeExport();
+      saveStore();
+
+      const cloneDoc = document.documentElement.cloneNode(true);
+      // 清理浏览器翻译插件注入的冗余节点
+      const transPopup = cloneDoc.querySelector('#immersive-translate-popup');
+      if (transPopup) transPopup.remove();
+
+      const rawHtml = '<!DOCTYPE html>\n' + cloneDoc.outerHTML;
+      const replacement = `/*__EMBEDDED_SNAPSHOT_START__*/\n    const EMBEDDED_DEFAULT_STORE = ${JSON.stringify(store)};\n    /*__EMBEDDED_SNAPSHOT_END__*/`;
+      const bundledHtml = rawHtml.replace(
+        /\/\*__EMBEDDED_SNAPSHOT_START__\*\/[\s\S]*?\/\*__EMBEDDED_SNAPSHOT_END__\*\//,
+        replacement
+      );
+
+      const blob = new Blob([bundledHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已下载干净无弹窗的最新 index.html，上传替换至 GitHub 即可！');
+    }
+
+    /********************************************************************
+     * 九、子女排行调整与字段即时保存（均自动记录到历史记录栈）
+     ********************************************************************/
+    function syncChildrenOrderToSpouses(parent, people) {
+      (parent.spouseIds || []).forEach(spId => {
+        const sp = people[spId];
+        if (sp && sp.childrenIds) {
+          const ordered = parent.childrenIds.filter(id => sp.childrenIds.includes(id));
+          const others = sp.childrenIds.filter(id => !parent.childrenIds.includes(id));
+          sp.childrenIds = [...ordered, ...others];
+        }
+      });
+    }
+
+    function moveChildStep(parentId, index, delta) {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      const parent = book.people[parentId];
+      if (!parent || !parent.childrenIds) return;
+      const targetIdx = index + delta;
+      if (targetIdx < 0 || targetIdx >= parent.childrenIds.length) return;
+      const arr = [...parent.childrenIds];
+      const movedId = arr[index];
+      const movedChild = book.people[movedId];
+      const [moved] = arr.splice(index, 1);
+      arr.splice(targetIdx, 0, moved);
+      parent.childrenIds = arr;
+      syncChildrenOrderToSpouses(parent, book.people);
+      recordHistoryStep(`调整「${parent.name}」之子女「${movedChild ? movedChild.name : ''}」长幼排位`);
+      renderAll();
+      showToast('已调整子女长幼次序（最大在最右，最小在最左）');
+    }
+
+    function reorderChild(parentId, draggedId, targetId) {
+      if (!ensureAdminPermission()) return;
+      if (!draggedId || draggedId === targetId) return;
+      const book = getCurrentBook();
+      const parent = book.people[parentId];
+      if (!parent || !parent.childrenIds) return;
+      const arr = [...parent.childrenIds];
+      const fromIdx = arr.indexOf(draggedId);
+      const toIdx = arr.indexOf(targetId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, draggedId);
+      parent.childrenIds = arr;
+      syncChildrenOrderToSpouses(parent, book.people);
+      const draggedChild = book.people[draggedId];
+      recordHistoryStep(`拖拽调整「${parent.name}」之子女「${draggedChild ? draggedChild.name : ''}」排行次序`);
+      renderAll();
+      showToast('已更新子女长幼排行（树图自右向左同步重排）');
+    }
+
+    function sortChildrenByBirth() {
+      if (!ensureAdminPermission() || !selectedPersonId) return;
+      const book = getCurrentBook();
+      const parent = book.people[selectedPersonId];
+      if (!parent || !parent.childrenIds || parent.childrenIds.length < 2) return;
+      parent.childrenIds.sort((a, b) => {
+        const ya = parseInt(book.people[a]?.birthYear, 10) || 9999;
+        const yb = parseInt(book.people[b]?.birthYear, 10) || 9999;
+        return ya - yb;
+      });
+      syncChildrenOrderToSpouses(parent, book.people);
+      recordHistoryStep(`将「${parent.name}」的子女按出生年份排定长幼`);
+      renderAll();
+      showToast('已按出生年份排定长幼：最年长者在最右，最年幼者在最左');
+    }
+
+    function savePersonField(field, value) {
+      if (!ensureAdminPermission() || !selectedPersonId) return;
+      const book = getCurrentBook();
+      const p = book.people[selectedPersonId];
+      if (!p) return;
+      p[field] = value;
+
+      const fieldLabels = {
+        name: '姓名',
+        gender: '性别',
+        courtesy: '字号',
+        title: '称谓',
+        birthYear: '生年',
+        deathYear: '卒年',
+        bio: '生平事略'
+      };
+      const label = fieldLabels[field] || field;
+      const displayVal = field === 'gender' ? (value === 'F' ? '女眷' : '男丁') : (value || '空');
+      recordHistoryStep(`修改「${p.name || '未命名'}」的${label}为“${displayVal}”`, `${p.id}_${field}`);
+
+      const layout = computeFamilyTreeLayout(book.people);
+      renderCanvasNodesAndLines(book.people, layout);
+      document.getElementById('selectedRankTag').textContent = `第 ${p.generation || 1} 世 · ${getBirthOrderBadge(p, book.people)}`;
+    }
+
+    function deleteSelectedPerson() {
+      if (!ensureAdminPermission() || !selectedPersonId) return;
+      const book = getCurrentBook();
+      const people = book.people;
+      if (Object.keys(people).length <= 1) {
+        showToast('族谱至少需保留一位族人节点');
+        return;
+      }
+      const target = people[selectedPersonId];
+      const deletedName = target.name;
+      if (!confirm(`确定要从谱籍中移除「${deletedName}」吗？（移除后也可通过顶部“回退”按钮恢复）`)) return;
+
+      Object.values(people).forEach(p => {
+        if (p.fatherId === selectedPersonId) p.fatherId = null;
+        if (p.motherId === selectedPersonId) p.motherId = null;
+        p.spouseIds = (p.spouseIds || []).filter(id => id !== selectedPersonId);
+        p.childrenIds = (p.childrenIds || []).filter(id => id !== selectedPersonId);
+      });
+
+      delete people[selectedPersonId];
+      selectedPersonId = Object.keys(people)[0];
+      recordHistoryStep(`删除族人节点「${deletedName}」`);
+      renderAll();
+      showToast(`已移除节点「${deletedName}」（可点顶部“回退”撤销）`);
+    }
+
+    /********************************************************************
+     * 十、围绕当前人物添加/关联亲属弹窗
+     ********************************************************************/
+    function openAddRelationModal(mode) {
+      if (!ensureAdminPermission() || !selectedPersonId) return;
+      currentRelModalMode = mode;
+      const book = getCurrentBook();
+      const curr = book.people[selectedPersonId];
+
+      const titles = {
+        parent: `为「${curr.name}」添加或选择父母 (归于上方)`,
+        child: `为「${curr.name}」添加或选择子女 (下方自右向左排)`,
+        spouse: `为「${curr.name}」添加或关联配偶 (并列同代)`,
+        sibling: `为「${curr.name}」添加同胞兄弟姐妹 (自右向左排)`
+      };
+      document.getElementById('relModalTitle').textContent = titles[mode];
+
+      document.getElementById('newRelName').value = '';
+      document.getElementById('newRelBirth').value = '';
+      document.getElementById('newRelTitle').value = '';
+      document.getElementById('existingFilterInput').value = '';
+
+      const banner = document.getElementById('relModalContextBanner');
+      const orderWrap = document.getElementById('newRelOrderWrap');
+      const otherParentWrap = document.getElementById('newRelOtherParentWrap');
+
+      orderWrap.classList.add('hidden');
+      otherParentWrap.classList.add('hidden');
+
+      if (mode === 'parent') {
+        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的生父/生母置于其<strong>上方</strong>。若当前人物为第 1 世，添加父母后全谱会自动顺延一世。`;
+        document.getElementById('newRelGender').value = curr.fatherId ? 'F' : 'M';
+      } else if (mode === 'child') {
+        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的子女置于其<strong>下方（第 ${(curr.generation || 1) + 1} 世）</strong>，遵循长者在右、幼者在左。`;
+        orderWrap.classList.remove('hidden');
+        const spouses = (curr.spouseIds || []).map(id => book.people[id]).filter(Boolean);
+        if (spouses.length > 0) {
+          otherParentWrap.classList.remove('hidden');
+          const sel = document.getElementById('newRelOtherParent');
+          sel.innerHTML = spouses.map(sp => `<option value="${sp.id}">${escapeHtml(sp.name)} (共同生育)</option>`).join('') + `<option value="">不指定另一半</option>`;
+        }
+      } else if (mode === 'spouse') {
+        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的连理配偶并列于<strong>第 ${curr.generation || 1} 世</strong>。`;
+        document.getElementById('newRelGender').value = curr.gender === 'M' ? 'F' : 'M';
+      } else if (mode === 'sibling') {
+        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的同胞兄弟姐妹置于<strong>第 ${curr.generation || 1} 世</strong>（长者在右，幼者在左）。`;
+        orderWrap.classList.remove('hidden');
+      }
+
+      switchRelModalTab('new');
+      document.getElementById('relationModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('newRelName').focus(), 60);
+    }
+
+    function openLinkExistingModal(mode) {
+      if (!ensureAdminPermission()) return;
+      openAddRelationModal(mode);
+      switchRelModalTab('existing');
+    }
+
+    function switchRelModalTab(tab) {
+      currentRelModalTab = tab;
+      const btnNew = document.getElementById('tabNewPerson');
+      const btnEx = document.getElementById('tabExistingPerson');
+      const bodyNew = document.getElementById('relTabNewBody');
+      const bodyEx = document.getElementById('relTabExistingBody');
+
+      if (tab === 'new') {
+        btnNew.className = 'flex-1 py-2.5 text-center border-b-2 border-[#9e2a2b] text-[#9e2a2b] bg-white';
+        btnEx.className = 'flex-1 py-2.5 text-center border-b-2 border-transparent text-stone-600 hover:text-stone-900';
+        bodyNew.classList.remove('hidden');
+        bodyEx.classList.add('hidden');
+      } else {
+        btnEx.className = 'flex-1 py-2.5 text-center border-b-2 border-[#9e2a2b] text-[#9e2a2b] bg-white';
+        btnNew.className = 'flex-1 py-2.5 text-center border-b-2 border-transparent text-stone-600 hover:text-stone-900';
+        bodyEx.classList.remove('hidden');
+        bodyNew.classList.add('hidden');
+        renderExistingCandidates();
+      }
+    }
+
+    function closeRelationModal() {
+      document.getElementById('relationModal').classList.add('hidden');
+    }
+
+    function confirmAddNewRelation() {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      const people = book.people;
+      const curr = people[selectedPersonId];
+      if (!curr) return;
+
+      const name = document.getElementById('newRelName').value.trim();
+      if (!name) {
+        showToast('请输入新族人姓名');
+        return;
+      }
+      const gender = document.getElementById('newRelGender').value;
+      const birthYear = document.getElementById('newRelBirth').value.trim() || '';
+      const title = document.getElementById('newRelTitle').value.trim() || '';
+      const orderPos = document.getElementById('newRelOrderPos').value;
+      const newId = 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+
+      const newPerson = {
+        id: newId,
+        name,
+        courtesy: '',
+        title,
+        gender,
+        generation: curr.generation || 1,
+        birthYear,
+        deathYear: '今',
+        bio: '',
+        fatherId: null,
+        motherId: null,
+        spouseIds: [],
+        childrenIds: []
+      };
+      people[newId] = newPerson;
+
+      if (currentRelModalMode === 'parent') {
+        newPerson.generation = (curr.generation || 1) - 1;
+        const existingOtherParentId = gender === 'M' ? curr.motherId : curr.fatherId;
+        if (existingOtherParentId && people[existingOtherParentId]) {
+          newPerson.spouseIds.push(existingOtherParentId);
+          if (!people[existingOtherParentId].spouseIds.includes(newId)) {
+            people[existingOtherParentId].spouseIds.push(newId);
+          }
+          newPerson.childrenIds = [...(people[existingOtherParentId].childrenIds || [])];
+        }
+        bindParentChildRelation(newId, curr.id, 'parent', false);
+        recordHistoryStep(`为「${curr.name}」添加父母「${name}」`);
+        showToast(`已添加父母「${name}」并置于「${curr.name}」上方`);
+
+      } else if (currentRelModalMode === 'child') {
+        newPerson.generation = (curr.generation || 1) + 1;
+        if (curr.gender === 'F') newPerson.motherId = curr.id;
+        else newPerson.fatherId = curr.id;
+
+        const otherParentId = document.getElementById('newRelOtherParent')?.value;
+        if (otherParentId && people[otherParentId]) {
+          if (people[otherParentId].gender === 'F') newPerson.motherId = otherParentId;
+          else newPerson.fatherId = otherParentId;
+          insertChildAtOrder(people[otherParentId], newId, orderPos, null);
+        }
+        insertChildAtOrder(curr, newId, orderPos, null);
+        recordHistoryStep(`为「${curr.name}」添加子女「${name}」`);
+        renderAll();
+        showToast(`已添加子女「${name}」并按自右向左规制排布`);
+
+      } else if (currentRelModalMode === 'spouse') {
+        newPerson.generation = curr.generation || 1;
+        if (!curr.spouseIds.includes(newId)) curr.spouseIds.push(newId);
+        newPerson.spouseIds.push(curr.id);
+        (curr.childrenIds || []).forEach(cid => {
+          const ch = people[cid];
+          if (!ch) return;
+          if (newPerson.gender === 'F' && !ch.motherId) {
+            ch.motherId = newId;
+            newPerson.childrenIds.push(cid);
+          } else if (newPerson.gender === 'M' && !ch.fatherId) {
+            ch.fatherId = newId;
+            newPerson.childrenIds.push(cid);
+          }
+        });
+        recordHistoryStep(`为「${curr.name}」添加配偶「${name}」`);
+        renderAll();
+        showToast(`已添加配偶「${name}」`);
+
+      } else if (currentRelModalMode === 'sibling') {
+        if (!curr.fatherId && !curr.motherId) {
+          const autoParentId = 'p_auto_' + Date.now();
+          const familySurname = curr.name ? curr.name.charAt(0) : '某';
+          people[autoParentId] = {
+            id: autoParentId,
+            name: familySurname + '公（尊亲）',
+            courtesy: '',
+            title: '先祖',
+            gender: 'M',
+            generation: (curr.generation || 1) - 1,
+            birthYear: '',
+            deathYear: '今',
+            bio: '系统为挂载同胞兄弟姐妹自动生成的共同父母节点，可点击修改名讳。',
+            fatherId: null,
+            motherId: null,
+            spouseIds: [],
+            childrenIds: [curr.id]
+          };
+          curr.fatherId = autoParentId;
+          propagateGenerationsFrom(autoParentId, Math.max(1, curr.generation), false);
+        }
+        newPerson.generation = curr.generation;
+        newPerson.fatherId = curr.fatherId;
+        newPerson.motherId = curr.motherId;
+        if (curr.fatherId && people[curr.fatherId]) {
+          insertChildAtOrder(people[curr.fatherId], newId, orderPos, curr.id);
+        }
+        if (curr.motherId && people[curr.motherId]) {
+          insertChildAtOrder(people[curr.motherId], newId, orderPos, curr.id);
+        }
+        recordHistoryStep(`为「${curr.name}」添加同胞「${name}」`);
+        renderAll();
+        showToast(`已添加同胞「${name}」`);
+      }
+
+      closeRelationModal();
+    }
+
+    function insertChildAtOrder(parentObj, childId, posMode, siblingRefId) {
+      if (!parentObj.childrenIds) parentObj.childrenIds = [];
+      const arr = parentObj.childrenIds.filter(id => id !== childId);
+      if (posMode === 'first') {
+        arr.unshift(childId);
+      } else if (posMode === 'before' && siblingRefId) {
+        const idx = arr.indexOf(siblingRefId);
+        if (idx !== -1) arr.splice(idx, 0, childId);
+        else arr.push(childId);
+      } else if (posMode === 'after' && siblingRefId) {
+        const idx = arr.indexOf(siblingRefId);
+        if (idx !== -1) arr.splice(idx + 1, 0, childId);
+        else arr.push(childId);
+      } else {
+        arr.push(childId);
+      }
+      parentObj.childrenIds = arr;
+    }
+
+    function renderExistingCandidates() {
+      const book = getCurrentBook();
+      const people = book.people;
+      const curr = people[selectedPersonId];
+      if (!curr) return;
+
+      const kw = (document.getElementById('existingFilterInput').value || '').trim().toLowerCase();
+      const listEl = document.getElementById('existingCandidatesList');
+
+      const candidates = Object.values(people)
+        .filter(p => p.id !== curr.id)
+        .filter(p => !kw || (p.name || '').toLowerCase().includes(kw) || (`第${p.generation}世`).includes(kw))
+        .sort((a, b) => (a.generation || 1) - (b.generation || 1));
+
+      if (candidates.length === 0) {
+        listEl.innerHTML = `<div class="p-4 text-center text-stone-400">没有找到匹配的已有族人</div>`;
+        return;
+      }
+
+      listEl.innerHTML = candidates.map(cand => {
+        let actionLabel = '选为父母 (置于上方)';
+        if (currentRelModalMode === 'child') actionLabel = '选为子女 (置于下方)';
+        else if (currentRelModalMode === 'spouse') actionLabel = '选为配偶 (并列同世)';
+        else if (currentRelModalMode === 'sibling') actionLabel = '选为同胞 (共属父母)';
+
+        return `
+          <div class="px-3 py-2 flex items-center justify-between hover:bg-amber-50/70 transition">
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${cand.gender === 'F' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-800'}">
+                ${cand.gender === 'F' ? '女' : '男'} · 第${cand.generation}世
+              </span>
+              <span class="font-bold text-stone-800">${escapeHtml(cand.name)}</span>
+              <span class="text-stone-400 text-[11px]">${escapeHtml(cand.birthYear || '')}</span>
+            </div>
+            <button onclick="linkExistingMember('${cand.id}')" class="px-2.5 py-1 rounded bg-[#9e2a2b] hover:bg-[#822021] text-white text-[11px] font-medium shadow-sm">
+              ${actionLabel}
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function linkExistingMember(targetId) {
+      if (!ensureAdminPermission()) return;
+      const book = getCurrentBook();
+      const people = book.people;
+      const curr = people[selectedPersonId];
+      const target = people[targetId];
+      if (!curr || !target) return;
+
+      if (currentRelModalMode === 'parent') {
+        const ok = bindParentChildRelation(target.id, curr.id, 'child', false);
+        if (ok) {
+          recordHistoryStep(`选择已有族人「${target.name}」作为「${curr.name}」的父母`);
+          closeRelationModal();
+          showToast(`已将「${curr.name}」归入「${target.name}」下方（第 ${curr.generation} 世）`);
+        }
+      } else if (currentRelModalMode === 'child') {
+        const ok = bindParentChildRelation(curr.id, target.id, 'child', false);
+        if (ok) {
+          recordHistoryStep(`选择已有族人「${target.name}」归为「${curr.name}」的子女`);
+          closeRelationModal();
+          showToast(`已将「${target.name}」归入「${curr.name}」下方（第 ${target.generation} 世）`);
+        }
+      } else if (currentRelModalMode === 'spouse') {
+        if (!curr.spouseIds.includes(target.id)) curr.spouseIds.push(target.id);
+        if (!target.spouseIds.includes(curr.id)) target.spouseIds.push(curr.id);
+        propagateGenerationsFrom(target.id, curr.generation || 1, false);
+        recordHistoryStep(`将「${target.name}」与「${curr.name}」关联为配偶`);
+        closeRelationModal();
+        showToast(`已将「${target.name}」与「${curr.name}」结为连理并同世排布`);
+      } else if (currentRelModalMode === 'sibling') {
+        const fId = curr.fatherId || target.fatherId;
+        const mId = curr.motherId || target.motherId;
+        if (fId) {
+          bindParentChildRelation(fId, curr.id, 'child', false);
+          bindParentChildRelation(fId, target.id, 'child', false);
+        }
+        if (mId) {
+          bindParentChildRelation(mId, curr.id, 'child', false);
+          bindParentChildRelation(mId, target.id, 'child', false);
+        }
+        propagateGenerationsFrom(target.id, curr.generation || 1, false);
+        recordHistoryStep(`将「${target.name}」与「${curr.name}」设为同胞`);
+        closeRelationModal();
+        showToast(`已将「${target.name}」与「${curr.name}」设为同胞`);
+      }
+    }
+
+    /********************************************************************
+     * 十一、画布拖拽平移、键盘 Ctrl+Z 快捷键、缩放与搜索
+     ********************************************************************/
+    const canvasContainer = document.getElementById('canvasContainer');
+    const viewport = document.getElementById('viewport');
+
+    function applyTransform() {
+      viewport.style.transform = `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.scale})`;
+      document.getElementById('zoomLabel').textContent = `${Math.round(viewState.scale * 100)}%`;
+    }
+
+    canvasContainer.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.person-card') || e.target.closest('button')) return;
+      viewState.isPanning = true;
+      viewState.startX = e.clientX - viewState.x;
+      viewState.startY = e.clientY - viewState.y;
+    });
+
+    canvasContainer.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.person-card') || e.target.closest('button')) return;
+      openStandalonePersonModal();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!viewState.isPanning) return;
+      viewState.x = e.clientX - viewState.startX;
+      viewState.y = e.clientY - viewState.startY;
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      viewState.isPanning = false;
+    });
+
+    // 全局键盘快捷键：Ctrl+Z / Cmd+Z 回退，Ctrl+Y / Cmd+Shift+Z 重做
+    window.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redoAction();
+        else undoAction();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        redoAction();
+      }
+    });
+
+    canvasContainer.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.08 : -0.08;
+      zoomCanvas(delta);
+    }, { passive: false });
+
+    function zoomCanvas(delta) {
+      viewState.scale = Math.min(2.0, Math.max(0.35, viewState.scale + delta));
+      applyTransform();
+    }
+
+    function centerTree() {
+      const book = getCurrentBook();
+      const { bounds } = computeFamilyTreeLayout(book.people);
+      const rect = canvasContainer.getBoundingClientRect();
+      const treeW = Math.max(300, bounds.maxX - bounds.minX + 240);
+      const treeH = Math.max(200, bounds.maxY - bounds.minY + 160);
+      const scaleX = rect.width / treeW;
+      const scaleY = rect.height / treeH;
+      viewState.scale = Math.min(1.1, Math.max(0.45, Math.min(scaleX, scaleY)));
+      viewState.x = (rect.width - (bounds.minX + bounds.maxX) * viewState.scale) / 2;
+      viewState.y = 45;
+      applyTransform();
+    }
+
+    function resetSingleRoot() {
+      if (!ensureAdminPermission()) return;
+      if (!confirm('确定要清空当前族谱节点，从单个始祖重新开始修谱吗？（重置后也可在修改记录中回退恢复）')) return;
+      const book = getCurrentBook();
+      book.people = {
+        p1: {
+          id: 'p1',
+          name: '始迁祖',
+          courtesy: '字元善',
+          title: '一世祖',
+          gender: 'M',
+          generation: 1,
+          birthYear: '1930',
+          deathYear: '今',
+          bio: '点击右侧按钮或双击空白处可随时随地新增族人。',
+          fatherId: null,
+          motherId: null,
+          spouseIds: [],
+          childrenIds: []
+        }
+      };
+      selectedPersonId = 'p1';
+      recordHistoryStep('重置为单人始祖起点');
+      renderAll();
+      centerTree();
+      showToast('已重置为单人始祖起点');
+    }
+
+    function loadDemoTree() {
+      if (!ensureAdminPermission()) return;
+      const demo = createDemoBook();
+      const book = getCurrentBook();
+      book.people = demo.people;
+      selectedPersonId = 'p1';
+      recordHistoryStep('载入四世同堂示例数据');
+      renderAll();
+      centerTree();
+      showToast('已加载四世同堂示例');
+    }
+
+    function handleSearch(val) {
+      const box = document.getElementById('searchResults');
+      const kw = val.trim().toLowerCase();
+      if (!kw) {
+        box.classList.add('hidden');
+        return;
+      }
+      const book = getCurrentBook();
+      const matches = Object.values(book.people).filter(p =>
+        (p.name || '').toLowerCase().includes(kw) ||
+        (p.courtesy || '').toLowerCase().includes(kw) ||
+        (`第${p.generation}世`).includes(kw)
+      );
+      if (matches.length === 0) {
+        box.innerHTML = `<div class="p-3 text-xs text-stone-400">未找到匹配族人</div>`;
+      } else {
+        box.innerHTML = matches.map(p => `
+          <div onclick="focusPersonFromSearch('${p.id}')" class="px-3 py-2 hover:bg-amber-50 cursor-pointer flex items-center justify-between text-xs border-b border-stone-100">
+            <span class="font-bold text-stone-800">${escapeHtml(p.name)}</span>
+            <span class="text-amber-800">第 ${p.generation} 世 · ${escapeHtml(getBirthOrderBadge(p, book.people))}</span>
+          </div>
+        `).join('');
+      }
+      box.classList.remove('hidden');
+    }
+
+    function focusPersonFromSearch(id) {
+      document.getElementById('searchResults').classList.add('hidden');
+      document.getElementById('searchInput').value = '';
+      selectPerson(id);
+      const book = getCurrentBook();
+      const { positions } = computeFamilyTreeLayout(book.people);
+      const pos = positions[id];
+      if (pos) {
+        const rect = canvasContainer.getBoundingClientRect();
+        viewState.x = rect.width / 2 - (pos.x + CARD_W / 2) * viewState.scale;
+        viewState.y = rect.height / 2 - (pos.y + CARD_H / 2) * viewState.scale;
+        applyTransform();
+      }
+    }
+
+    /********************************************************************
+     * 十二、多族谱管理中心 & PDF / PNG 画卷导出
+     ********************************************************************/
+    function openBookModal() {
+      renderBookList();
+      document.getElementById('bookModal').classList.remove('hidden');
+    }
+    function closeBookModal() {
+      document.getElementById('bookModal').classList.add('hidden');
+    }
+
+    function renderBookList() {
+      const container = document.getElementById('bookListContainer');
+      const books = Object.values(store.books);
+      container.innerHTML = books.map(b => {
+        const count = Object.keys(b.people || {}).length;
+        const isCurrent = b.id === store.activeBookId;
+        return `
+          <div class="p-3 rounded-lg border ${isCurrent ? 'border-[#9e2a2b] bg-amber-50/40' : 'border-stone-200 bg-white'} flex items-center justify-between">
+            <div>
+              <div class="font-bold text-stone-800 text-sm flex items-center gap-2">
+                <span>${escapeHtml(b.name)}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-stone-200 text-stone-700">${escapeHtml(b.hall || '传家堂')}</span>
+                ${isCurrent ? '<span class="text-[10px] px-2 py-0.5 rounded bg-[#9e2a2b] text-white">当前打开</span>' : ''}
+              </div>
+              <div class="text-[11px] text-stone-500 mt-0.5">收录族人：${count} 人 · 修改记录：${(b.history || []).length} 条</div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${!isCurrent ? `<button onclick="switchBook('${b.id}')" class="px-3 py-1 rounded bg-stone-800 text-white hover:bg-stone-700">切换此谱</button>` : ''}
+              ${isAdminUnlocked ? `<button onclick="deleteBook('${b.id}')" class="px-2.5 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50">删除</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function createNewBook() {
+      if (!ensureAdminPermission()) return;
+      const name = document.getElementById('newBookName').value.trim() || '新建家族宗谱';
+      const hall = document.getElementById('newBookHall').value.trim() || '敦本堂';
+      const rootName = document.getElementById('newBookRootName').value.trim() || '一世始祖';
+      const id = 'book_' + Date.now();
+      store.books[id] = {
+        id,
+        name,
+        hall,
+        people: {
+          p1: {
+            id: 'p1', name: rootName, courtesy: '', title: '始祖', gender: 'M', generation: 1,
+            birthYear: '1930', deathYear: '今', bio: '', fatherId: null, motherId: null, spouseIds: [], childrenIds: []
+          }
+        },
+        history: [],
+        historyCursor: -1
+      };
+      store.activeBookId = id;
+      selectedPersonId = 'p1';
+      ensureBookHistoryInitialized(store.books[id]);
+      saveStore();
+      renderAll();
+      centerTree();
+      closeBookModal();
+      showToast(`已创建并打开《${name}》`);
+    }
+
+    function switchBook(id) {
+      if (!store.books[id]) return;
+      store.activeBookId = id;
+      selectedPersonId = Object.keys(store.books[id].people)[0] || null;
+      ensureBookHistoryInitialized(store.books[id]);
+      saveStore();
+      renderAll();
+      centerTree();
+      closeBookModal();
+      showToast(`已切换至《${store.books[id].name}》`);
+    }
+
+    function deleteBook(id) {
+      if (!ensureAdminPermission()) return;
+      const keys = Object.keys(store.books);
+      if (keys.length <= 1) {
+        showToast('至少需保留一部族谱');
+        return;
+      }
+      if (!confirm(`确定要彻底删除《${store.books[id].name}》吗？`)) return;
+      delete store.books[id];
+      if (store.activeBookId === id) {
+        store.activeBookId = Object.keys(store.books)[0];
+      }
+      saveStore();
+      renderBookList();
+      renderAll();
+      showToast('已删除该族谱');
+    }
+
+    function openExportModal() {
+      document.getElementById('exportModal').classList.remove('hidden');
+    }
+    function closeExportModal() {
+      document.getElementById('exportModal').classList.add('hidden');
+    }
+
+    function renderScrollCanvas() {
+      const book = getCurrentBook();
+      const people = book.people;
+      const { positions, bounds, genRows } = computeFamilyTreeLayout(people);
+
+      const padX = 160;
+      const padTop = 135;
+      const padBottom = 80;
+      const contentW = Math.max(960, bounds.maxX - bounds.minX + padX * 2);
+      const contentH = Math.max(560, bounds.maxY - bounds.minY + padTop + padBottom);
+
+      const scale = 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = contentW * scale;
+      canvas.height = contentH * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = '#f8f5f0';
+      ctx.fillRect(0, 0, contentW, contentH);
+      ctx.strokeStyle = '#9e2a2b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(18, 18, contentW - 36, contentH - 36);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(24, 24, contentW - 48, contentH - 48);
+
+      ctx.fillStyle = '#2c2623';
+      ctx.font = 'bold 28px "Noto Serif SC", serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${book.name} · 世系总图 (${book.hall || '传家堂'})`, contentW / 2, 62);
+
+      ctx.fillStyle = '#9e2a2b';
+      ctx.font = '13px "Noto Serif SC", serif';
+      ctx.fillText('【宗谱规制：自右向左排布 · 最右居长 · 最左居幼】', contentW / 2, 88);
+
+      const offsetX = padX - bounds.minX;
+      const offsetY = padTop - bounds.minY;
+
+      genRows.forEach(r => {
+        const ry = r.y + offsetY;
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = 'bold 13px "Noto Serif SC", serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`第 ${r.gen} 世`, 42, ry + CARD_H / 2 + 4);
+        ctx.textAlign = 'right';
+        ctx.fillText(`第 ${r.gen} 世 (右起)`, contentW - 42, ry + CARD_H / 2 + 4);
+      });
+
+      ctx.strokeStyle = '#9c7a54';
+      ctx.lineWidth = 2;
+      Object.values(people).forEach(child => {
+        const cPos = positions[child.id];
+        if (!cPos) return;
+        const fPos = child.fatherId ? positions[child.fatherId] : null;
+        const mPos = child.motherId ? positions[child.motherId] : null;
+        if (!fPos && !mPos) return;
+        let sx, sy;
+        if (fPos && mPos) {
+          sx = (fPos.x + mPos.x + CARD_W) / 2 + offsetX;
+          sy = (fPos.y + mPos.y) / 2 + CARD_H / 2 + offsetY;
+        } else if (fPos) {
+          sx = fPos.x + CARD_W / 2 + offsetX;
+          sy = fPos.y + CARD_H + offsetY;
+        } else {
+          sx = mPos.x + CARD_W / 2 + offsetX;
+          sy = mPos.y + CARD_H + offsetY;
+        }
+        const ex = cPos.x + CARD_W / 2 + offsetX;
+        const ey = cPos.y + offsetY;
+        const my = sy + (ey - sy) * 0.52;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx, my);
+        ctx.lineTo(ex, my);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      });
+
+      Object.values(people).forEach(p => {
+        const pos = positions[p.id];
+        if (!pos) return;
+        const x = pos.x + offsetX;
+        const y = pos.y + offsetY;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x, y, CARD_W, CARD_H);
+        ctx.strokeStyle = p.gender === 'F' ? '#a84255' : '#3b5975';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x, y, CARD_W, CARD_H);
+
+        ctx.fillStyle = p.gender === 'F' ? '#a84255' : '#3b5975';
+        ctx.fillRect(x, y, CARD_W, 5);
+
+        ctx.fillStyle = '#2c2623';
+        ctx.font = 'bold 15px "Noto Serif SC", serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(p.name || '未命名', x + 10, y + 28);
+
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(`${getBirthOrderBadge(p, people)} · 第${p.generation}世`, x + 10, y + 50);
+
+        ctx.fillStyle = '#78716c';
+        ctx.font = '11px sans-serif';
+        ctx.fillText(`${p.birthYear || '?'} - ${p.deathYear || '今'}`, x + 10, y + 72);
+      });
+
+      return { canvas, width: contentW, height: contentH };
+    }
+
+    function exportHighResPng() {
+      const { canvas } = renderScrollCanvas();
+      const link = document.createElement('a');
+      link.download = `${getCurrentBook().name}_世系图.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      closeExportModal();
+      showToast('已导出高清 PNG 世系全图');
+    }
+
+    function exportFamilyPdf() {
+      const { canvas, width, height } = renderScrollCanvas();
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const { jsPDF } = window.jspdf;
+      const orientation = width >= height ? 'l' : 'p';
+      const pdf = new jsPDF({ orientation, unit: 'px', format: [width, height] });
+      pdf.addImage(imgData, 'JPEG', 0, 0, width, height);
+      pdf.save(`${getCurrentBook().name}_族谱画卷.pdf`);
+      closeExportModal();
+      showToast('已生成并下载 PDF 族谱画卷');
+    }
+
+    function exportJsonBackup() {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(store, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `${getCurrentBook().name}_备份.json`;
+      a.click();
+      closeExportModal();
+      showToast('已导出 JSON 备份文件');
+    }
+
+    function importJsonBackup(event) {
+      if (!ensureAdminPermission()) return;
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && parsed.books) {
+            store = parsed;
+            ensureBookHistoryInitialized(getCurrentBook());
+            saveStore();
+            renderAll();
+            centerTree();
+            closeExportModal();
+            showToast('族谱备份恢复成功');
+          }
+        } catch (err) {
+          showToast('备份文件格式有误');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      closeAllModalsBeforeExport();
+      loadStore();
+      renderAll();
+      setTimeout(centerTree, 80);
+    });
+  </script>
+</body>
+</html>
