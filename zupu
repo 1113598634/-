@@ -1,0 +1,3572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>源流 · 互动式可视化族谱与多谱籍系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- 引入 html2canvas 与 jsPDF 用于导出高清族谱 PDF 画卷与长图 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-paper: #f8f5f0;
+      --ink-dark: #2c2623;
+      --accent-red: #9e2a2b;
+      --male-blue: #2b5973;
+      --female-rose: #a84253;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-paper);
+      color: var(--ink-dark);
+      overflow: hidden;
+      user-select: none;
+    }
+    .serif-title {
+      font-family: 'Noto Serif SC', serif;
+    }
+    /* 宣纸微纹理与网格背景 */
+    .canvas-bg {
+      background-color: #f8f5f0;
+      background-image: 
+        radial-gradient(#d8cfc4 1px, transparent 1px),
+        radial-gradient(#e5dec9 1px, #f8f5f0 1px);
+      background-size: 32px 32px;
+      background-position: 0 0, 16px 16px;
+    }
+    /* 人物卡片过渡与阴影 */
+    .person-card {
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .person-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px -6px rgba(44, 38, 35, 0.15);
+    }
+    .person-card.selected {
+      box-shadow: 0 0 0 3px #9e2a2b, 0 12px 28px -4px rgba(158, 42, 43, 0.25);
+    }
+    .person-card.root-focus::after {
+      content: '中心';
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      background: #9e2a2b;
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    /* 滚动条美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(216, 207, 196, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(140, 125, 112, 0.4);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(140, 125, 112, 0.7);
+    }
+    /* 连线动画 */
+    .tree-link {
+      transition: d 0.3s ease;
+    }
+    .dragging-item {
+      opacity: 0.4;
+      border: 1px dashed #9e2a2b;
+    }
+    /* 打印与典籍排版专用样式 */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printableBookSection, #printableBookSection * {
+        visibility: visible;
+      }
+      #printableBookSection {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #fff !important;
+      }
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+  <!-- 顶部导航栏 -->
+  <header class="h-16 bg-[#efeae1]/95 backdrop-blur border-b border-[#dcd3c6] px-3 lg:px-6 flex items-center justify-between z-20 shrink-0 shadow-sm">
+    <div class="flex items-center gap-2.5 sm:gap-3.5">
+      <div class="w-10 h-10 rounded-lg bg-[#9e2a2b] flex items-center justify-center text-white shadow-inner shrink-0">
+        <span class="serif-title font-bold text-xl tracking-widest">谱</span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="serif-title font-bold text-base sm:text-lg text-[#2c2623] tracking-wider hidden xs:block">
+            源流宗谱
+          </h1>
+          <!-- 多族谱切换与管理触发按钮 -->
+          <button onclick="openClanManagerModal()" class="group flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#fdfbf7] hover:bg-white border border-[#c8b9a6] hover:border-[#9e2a2b] shadow-2xs transition">
+            <i class="fa-solid fa-book-bookmark text-[#9e2a2b] text-xs"></i>
+            <span id="currentBookTitleDisplay" class="serif-title font-bold text-xs sm:text-sm text-[#2c2623] max-w-[140px] sm:max-w-[200px] truncate">
+              苏氏家乘·四世同堂
+            </span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#efeae1] text-[#5c5046] group-hover:bg-[#9e2a2b] group-hover:text-white transition">
+              族谱管理 <i class="fa-solid fa-chevron-down text-[9px] ml-0.5"></i>
+            </span>
+          </button>
+        </div>
+        <p id="currentBookNoteDisplay" class="text-[11px] text-[#7a6f64] hidden sm:block truncate max-w-md mt-0.5">
+          字辈：文、明、景、念 · 点击人物卡片添加亲属，拖拽调整长幼排行
+        </p>
+      </div>
+    </div>
+
+    <!-- 中间搜索与统计 -->
+    <div class="hidden xl:flex items-center gap-4 bg-[#f8f5f0] border border-[#d8cfc4] px-3 py-1.5 rounded-xl">
+      <div class="flex items-center gap-2 text-xs text-[#5c5046]">
+        <span>本谱人数: <strong id="statTotal" class="text-[#9e2a2b] font-semibold">1</strong></span>
+        <span class="text-[#d8cfc4]">|</span>
+        <span>传承世代: <strong id="statGen" class="text-[#2b5973] font-semibold">1</strong> 世</span>
+      </div>
+      <div class="relative">
+        <input id="searchInput" type="text" placeholder="搜索族人姓名..." 
+          class="text-xs bg-white border border-[#d8cfc4] rounded-lg pl-7 pr-2.5 py-1 focus:outline-none focus:border-[#9e2a2b] w-36 transition-all focus:w-48">
+        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9c8f82] text-xs"></i>
+        <div id="searchDropdown" class="hidden absolute left-0 top-full mt-1 w-56 bg-white border border-[#d8cfc4] rounded-xl shadow-lg max-h-60 overflow-y-auto z-50"></div>
+      </div>
+    </div>
+
+    <!-- 右侧工具按钮组 -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- 新建族谱快捷按钮 -->
+      <button onclick="openNewClanModal()" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium bg-[#9e2a2b] hover:bg-[#822021] text-white rounded-lg transition flex items-center gap-1.5 shadow-xs" title="新建一部独立族谱">
+        <i class="fa-solid fa-folder-plus"></i>
+        <span class="hidden sm:inline">新建族谱</span>
+      </button>
+
+      <!-- 导出 PDF / 高清图 / 备份 按钮 -->
+      <button onclick="openExportCenterModal()" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium bg-[#e5dec9] hover:bg-[#d8cfc4] text-[#2c2623] border border-[#c8b9a6] rounded-lg transition flex items-center gap-1.5" title="导出 PDF 画卷、PNG 长图或 JSON 备份">
+        <i class="fa-solid fa-file-pdf text-[#9e2a2b]"></i>
+        <span>导出 PDF / 备份</span>
+      </button>
+
+      <!-- 怎么做成网页或小程序 指南按钮 -->
+      <button onclick="openDeployGuideModal()" class="px-2.5 sm:px-3 py-1.5 text-xs font-medium bg-white hover:bg-stone-100 text-[#2b5973] border border-[#b8c9d4] rounded-lg transition flex items-center gap-1.5 shadow-2xs" title="查看如何发布为独立网站或微信小程序">
+        <i class="fa-solid fa-rocket text-[#2b5973]"></i>
+        <span class="hidden md:inline">网页/小程序指南</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主工作区：左侧画布 + 右侧详情控制栏 -->
+  <div class="flex-1 flex relative overflow-hidden">
+    
+    <!-- 互动式族谱画布 -->
+    <main id="canvasViewport" class="flex-1 relative canvas-bg overflow-hidden cursor-grab active:cursor-grabbing">
+      <!-- 变换容器 -->
+      <div id="canvasTransform" class="absolute top-0 left-0 origin-top-left" style="transform: translate(0px, 0px) scale(1);">
+        <!-- 世代标尺背景层 -->
+        <div id="generationBandsLayer" class="absolute top-0 left-0 pointer-events-none"></div>
+        <!-- SVG 连线层 -->
+        <svg id="connectionsSvg" class="absolute top-0 left-0 pointer-events-none overflow-visible"></svg>
+        <!-- HTML 节点卡片层 -->
+        <div id="nodesContainer" class="absolute top-0 left-0"></div>
+      </div>
+
+      <!-- 左下角图例与快捷说明 -->
+      <div class="absolute left-4 bottom-4 bg-white/90 backdrop-blur border border-[#dcd3c6] rounded-xl p-3 shadow-sm text-xs space-y-2 pointer-events-auto hidden sm:block">
+        <div class="font-semibold text-[#3d352e] flex items-center gap-1.5">
+          <i class="fa-regular fa-compass text-[#9e2a2b]"></i> 图例与操作
+        </div>
+        <div class="flex items-center gap-3 text-[#5c5046]">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#2b5973] inline-block"></span> 男性</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#a84253] inline-block"></span> 女性</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-[#c94a4a] inline-block"></span> 婚姻连线</span>
+          <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-[#6e6259] inline-block"></span> 世系血缘</span>
+        </div>
+        <div class="text-[11px] text-[#8c7d70]">
+          滚轮缩放 · 拖拽平移 · 点击人物添加亲属或重排子女
+        </div>
+      </div>
+
+      <!-- 左上角/右下角画布缩放控制组 -->
+      <div class="absolute right-4 bottom-4 flex flex-col gap-1.5 bg-white/95 backdrop-blur border border-[#dcd3c6] p-1.5 rounded-xl shadow-md z-10">
+        <button onclick="zoomCanvas(0.15)" class="w-8 h-8 rounded-lg hover:bg-[#efeae1] text-[#3d352e] flex items-center justify-center transition" title="放大">
+          <i class="fa-solid fa-plus text-xs"></i>
+        </button>
+        <div id="zoomLevelText" class="text-[10px] font-semibold text-center text-[#7a6f64] py-0.5">100%</div>
+        <button onclick="zoomCanvas(-0.15)" class="w-8 h-8 rounded-lg hover:bg-[#efeae1] text-[#3d352e] flex items-center justify-center transition" title="缩小">
+          <i class="fa-solid fa-minus text-xs"></i>
+        </button>
+        <div class="h-[1px] bg-[#e5dec9] my-0.5"></div>
+        <button onclick="centerViewOnSelected()" class="w-8 h-8 rounded-lg hover:bg-[#efeae1] text-[#9e2a2b] flex items-center justify-center transition" title="聚焦当前选中人物">
+          <i class="fa-solid fa-crosshairs text-xs"></i>
+        </button>
+        <button onclick="fitFullTree()" class="w-8 h-8 rounded-lg hover:bg-[#efeae1] text-[#3d352e] flex items-center justify-center transition" title="居中显示全谱">
+          <i class="fa-solid fa-expand text-xs"></i>
+        </button>
+      </div>
+    </main>
+
+    <!-- 右侧人物操作与子女排序面板 -->
+    <aside id="inspectorPanel" class="w-80 sm:w-96 bg-[#fdfbf7] border-l border-[#dcd3c6] flex flex-col z-20 shadow-xl transition-all duration-300">
+      <!-- 面板顶部：当前人物摘要 -->
+      <div id="panelHeader" class="p-4 bg-[#efeae1]/70 border-b border-[#dcd3c6] flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="selectedAvatarBadge" class="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm bg-[#2b5973]">
+            始
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 id="selectedPersonTitle" class="serif-title font-bold text-base text-[#2c2623]">苏明远</h2>
+              <span id="selectedGenBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-[#e5dec9] text-[#5c5046] font-medium">第 1 世</span>
+            </div>
+            <p id="selectedRelationHint" class="text-xs text-[#7a6f64] mt-0.5">当前选中节点 · 可添加亲属或调整排行</p>
+          </div>
+        </div>
+        <button onclick="setAsViewCenter()" class="px-2.5 py-1 text-xs rounded-lg border border-[#c8b9a6] hover:bg-[#e5dec9] text-[#5c5046] transition flex items-center gap-1" title="将此人设为视图聚焦中心">
+          <i class="fa-solid fa-bullseye text-[#9e2a2b]"></i> 居中
+        </button>
+      </div>
+
+      <!-- 面板主体内容滚动区 -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-5">
+        
+        <!-- 1. 四大核心添加亲属快捷操作 -->
+        <section>
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[#5c5046] flex items-center gap-1.5">
+              <i class="fa-solid fa-user-plus text-[#9e2a2b]"></i> 繁衍与添加亲属
+            </h3>
+            <span class="text-[11px] text-[#8c7d70]">点击直接添加并自动连线</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- 添加父母 -->
+            <button onclick="openQuickAddModal('parents')" class="group p-3 rounded-xl border border-[#dcd3c6] bg-white hover:border-[#9e2a2b] hover:bg-[#fff9f8] transition text-left flex items-start gap-2.5 shadow-sm">
+              <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <i class="fa-solid fa-arrow-up-from-bracket text-sm"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-[#2c2623]">添加父母</div>
+                <div id="btnParentsSubtext" class="text-[11px] text-[#8c7d70] mt-0.5">向上追溯上一世</div>
+              </div>
+            </button>
+
+            <!-- 添加配偶 -->
+            <button onclick="openQuickAddModal('spouse')" class="group p-3 rounded-xl border border-[#dcd3c6] bg-white hover:border-[#9e2a2b] hover:bg-[#fff9f8] transition text-left flex items-start gap-2.5 shadow-sm">
+              <div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <i class="fa-solid fa-heart text-sm"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-[#2c2623]">添加配偶</div>
+                <div class="text-[11px] text-[#8c7d70] mt-0.5">结发连理同代并列</div>
+              </div>
+            </button>
+
+            <!-- 添加兄弟姐妹 -->
+            <button onclick="openQuickAddModal('sibling')" class="group p-3 rounded-xl border border-[#dcd3c6] bg-white hover:border-[#9e2a2b] hover:bg-[#fff9f8] transition text-left flex items-start gap-2.5 shadow-sm">
+              <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <i class="fa-solid fa-people-arrows text-sm"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-[#2c2623]">添加兄弟姐妹</div>
+                <div class="text-[11px] text-[#8c7d70] mt-0.5">同胞手足同辈相连</div>
+              </div>
+            </button>
+
+            <!-- 添加子女 -->
+            <button onclick="openQuickAddModal('child')" class="group p-3 rounded-xl border border-[#dcd3c6] bg-white hover:border-[#9e2a2b] hover:bg-[#fff9f8] transition text-left flex items-start gap-2.5 shadow-sm">
+              <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <i class="fa-solid fa-diagram-next text-sm"></i>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-[#2c2623]">添加子女</div>
+                <div class="text-[11px] text-[#8c7d70] mt-0.5">向下延展下一世代</div>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <!-- 2. 子女排序与同辈排行管理 -->
+        <section class="bg-white border border-[#dcd3c6] rounded-xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              <i class="fa-solid fa-arrow-down-short-wide text-[#9e2a2b] text-xs"></i>
+              <h3 class="text-xs font-bold text-[#2c2623]">子女排行与次序调整</h3>
+            </div>
+            <button id="sortChildrenByYearBtn" onclick="sortCurrentChildrenByBirthYear()" class="text-[11px] px-2 py-0.5 rounded bg-[#efeae1] hover:bg-[#e2d9c8] text-[#5c5046] transition flex items-center gap-1" title="根据出生年份从早到晚自动排列">
+              <i class="fa-regular fa-calendar-check"></i> 按生年排序
+            </button>
+          </div>
+
+          <!-- 家庭组切换（如果此人有多段婚姻或多个配偶家庭） -->
+          <div id="unionSelectorWrap" class="hidden mb-2">
+            <select id="unionSelect" onchange="renderChildrenSortList()" class="w-full text-xs border border-[#d8cfc4] rounded-lg px-2 py-1.5 bg-[#f8f5f0] text-[#3d352e]"></select>
+          </div>
+
+          <p class="text-[11px] text-[#8c7d70] mb-2.5">
+            支持拖拽或点击上下箭头调整顺序，树状图中从左至右的排列（长子/次子/长女等）将实时同步。
+          </p>
+
+          <!-- 子女列表容器 -->
+          <div id="childrenSortList" class="space-y-1.5 max-h-52 overflow-y-auto pr-0.5"></div>
+
+          <!-- 若当前人物本身有同父母兄弟姐妹，也提供快捷切换重排入口 -->
+          <div id="siblingOrderTip" class="mt-3 pt-2.5 border-t border-[#efeae1] hidden flex items-center justify-between text-[11px] text-[#7a6f64]">
+            <span>想调整<strong>本人与同胞兄弟姐妹</strong>的排行？</span>
+            <button onclick="selectParentToReorderSiblings()" class="text-[#9e2a2b] hover:underline font-medium">
+              切换至父母节点排位 <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- 3. 当前人物详细档案编辑 -->
+        <section class="bg-white border border-[#dcd3c6] rounded-xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold text-[#2c2623] flex items-center gap-1.5">
+              <i class="fa-regular fa-id-card text-[#2b5973]"></i> 人物生平档案
+            </h3>
+            <span id="saveIndicator" class="text-[11px] text-emerald-700 opacity-0 transition-opacity duration-300">
+              <i class="fa-solid fa-check"></i> 已实时更新
+            </span>
+          </div>
+
+          <form id="personEditForm" onsubmit="handleProfileSave(event)" class="space-y-3 text-xs">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">姓名 *</label>
+                <input type="text" id="editName" required class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]">
+              </div>
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">性别</label>
+                <select id="editGender" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-[#9e2a2b]">
+                  <option value="M">男 (乾)</option>
+                  <option value="F">女 (坤)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">出生年份</label>
+                <input type="number" id="editBirthYear" placeholder="如 1950" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]">
+              </div>
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">状态</label>
+                <select id="editIsAlive" onchange="toggleDeathYearInput()" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-[#9e2a2b]">
+                  <option value="true">健在</option>
+                  <option value="false">已故</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div id="deathYearWrap" class="hidden">
+                <label class="block text-[11px] text-[#7a6f64] mb-1">逝世年份</label>
+                <input type="number" id="editDeathYear" placeholder="如 2020" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]">
+              </div>
+              <div class="col-span-2" id="titleSpanWrap">
+                <label class="block text-[11px] text-[#7a6f64] mb-1">字辈 / 排行称谓 / 备注</label>
+                <input type="text" id="editCourtesy" placeholder="如：字德明 · 长房长子" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">生平简介 / 籍贯迁徙</label>
+              <textarea id="editBio" rows="2" placeholder="记载人物生平事迹、配偶良缘或迁居之地..." class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b] resize-none"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-[#efeae1]">
+              <button type="button" onclick="confirmDeletePerson()" class="px-3 py-1.5 rounded-lg text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition flex items-center gap-1">
+                <i class="fa-regular fa-trash-can"></i> 删除节点
+              </button>
+              <button type="submit" class="px-4 py-1.5 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white font-medium transition shadow-sm flex items-center gap-1.5">
+                <i class="fa-regular fa-floppy-disk"></i> 保存修改
+              </button>
+            </div>
+          </form>
+        </section>
+
+      </div>
+    </aside>
+  </div>
+
+  <!-- 添加亲属弹窗 Modal -->
+  <div id="addRelativeModal" class="fixed inset-0 bg-black/45 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-[#d8cfc4] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fadeIn">
+      <div class="px-5 py-4 bg-[#efeae1] border-b border-[#dcd3c6] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span id="modalIconBadge" class="w-7 h-7 rounded-lg bg-[#9e2a2b] text-white flex items-center justify-center text-xs">
+            <i class="fa-solid fa-user-plus"></i>
+          </span>
+          <h3 id="modalTitle" class="serif-title font-bold text-base text-[#2c2623]">添加亲属节点</h3>
+        </div>
+        <button onclick="closeQuickAddModal()" class="w-7 h-7 rounded-lg hover:bg-[#dcd3c6]/60 text-[#5c5046] flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="quickAddForm" onsubmit="submitQuickAdd(event)" class="p-5 space-y-4 text-xs">
+        <input type="hidden" id="quickAddMode" value="">
+
+        <div id="modalSubtitle" class="p-2.5 rounded-xl bg-[#f4efe6] border border-[#e5dec9] text-[#5c5046] text-xs leading-relaxed">
+          正在为当前人物添加亲属。
+        </div>
+
+        <!-- 针对父母添加模式的双人输入区 -->
+        <div id="parentsDualInputs" class="hidden space-y-3">
+          <div class="p-3 rounded-xl border border-[#d8cfc4] bg-white space-y-2.5">
+            <div class="font-semibold text-[#2b5973] flex items-center gap-1.5">
+              <i class="fa-solid fa-mars"></i> 父亲信息
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">父亲姓名 *</label>
+                <input type="text" id="addFatherName" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5">
+              </div>
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">出生年份</label>
+                <input type="number" id="addFatherYear" placeholder="如 1935" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5">
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl border border-[#d8cfc4] bg-white space-y-2.5">
+            <div class="font-semibold text-[#a84253] flex items-center gap-1.5">
+              <i class="fa-solid fa-venus"></i> 母亲信息
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">母亲姓名（可选）</label>
+                <input type="text" id="addMotherName" placeholder="留空则默认称某氏" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5">
+              </div>
+              <div>
+                <label class="block text-[11px] text-[#7a6f64] mb-1">出生年份</label>
+                <input type="number" id="addMotherYear" placeholder="如 1937" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 针对配偶 / 子女 / 兄弟姐妹的单人输入区 -->
+        <div id="singleRelativeInputs" class="space-y-3">
+          <!-- 如果添加子女且当前人物有多位配偶，支持选择与哪位配偶所生 -->
+          <div id="childParentUnionWrap" class="hidden">
+            <label class="block text-[11px] text-[#7a6f64] mb-1">所属父母婚姻家庭</label>
+            <select id="childUnionSelect" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white"></select>
+          </div>
+
+          <!-- 如果添加子女或兄弟姐妹，支持选择插入到排行的位置 -->
+          <div id="insertPositionWrap" class="hidden">
+            <label class="block text-[11px] text-[#7a6f64] mb-1">同辈长幼排位顺序</label>
+            <select id="insertOrderSelect" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white">
+              <option value="last">排在末尾（幼子/幼女/弟妹）</option>
+              <option value="first">排在首位（长子/长女/兄姐）</option>
+              <option value="before_current" id="optBeforeCurrent">紧邻当前人物左侧（兄/姐）</option>
+              <option value="after_current" id="optAfterCurrent">紧邻当前人物右侧（弟/妹）</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">姓名 *</label>
+              <input type="text" id="addSingleName" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#9e2a2b]">
+            </div>
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">性别</label>
+              <select id="addSingleGender" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white">
+                <option value="M">男 (乾)</option>
+                <option value="F">女 (坤)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">出生年份</label>
+              <input type="number" id="addSingleBirthYear" placeholder="如 1988" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5">
+            </div>
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">字辈 / 排行备注</label>
+              <input type="text" id="addSingleCourtesy" placeholder="如：长子 / 次女 / 结发妻" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#efeae1]">
+          <button type="button" onclick="closeQuickAddModal()" class="px-4 py-1.5 rounded-lg border border-[#d8cfc4] text-[#5c5046] hover:bg-stone-100">
+            取消
+          </button>
+          <button type="submit" class="px-5 py-1.5 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white font-medium shadow-sm">
+            确认添加入谱
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 通用确认与通知提示框 (代替原生 alert/confirm) -->
+  <div id="customDialogModal" class="fixed inset-0 bg-black/45 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-[#d8cfc4] rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4">
+      <div class="flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h4 id="dialogTitle" class="serif-title font-bold text-base text-[#2c2623]">操作确认</h4>
+          <p id="dialogMessage" class="text-xs text-[#5c5046] mt-1 leading-relaxed"></p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="dialogCancelBtn" class="px-3.5 py-1.5 rounded-lg border border-[#d8cfc4] text-xs text-[#5c5046] hover:bg-stone-100">取消</button>
+        <button id="dialogConfirmBtn" class="px-4 py-1.5 rounded-lg bg-[#9e2a2b] text-white text-xs font-medium hover:bg-[#822021]">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 顶部轻提示 Toast -->
+  <div id="toastBanner" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 transform -translate-y-2">
+    <div class="bg-[#2c2623] text-[#f8f5f0] text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-[#5c5046]">
+      <i class="fa-solid fa-circle-check text-emerald-400"></i>
+      <span id="toastText">操作成功</span>
+    </div>
+  </div>
+
+  <!-- ==================== 新增弹窗 1：多族谱管理中心 (切换 / 新建 / 重命名 / 删除) ==================== -->
+  <div id="clanManagerModal" class="fixed inset-0 bg-black/45 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-[#d8cfc4] rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div class="px-5 py-4 bg-[#efeae1] border-b border-[#dcd3c6] flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-[#9e2a2b] text-white flex items-center justify-center text-sm">
+            <i class="fa-solid fa-book-journal-whills"></i>
+          </span>
+          <div>
+            <h3 class="serif-title font-bold text-base text-[#2c2623]">宗谱谱籍管理中心</h3>
+            <p class="text-[11px] text-[#7a6f64]">支持创建多套独立族谱、随时切换、重命名或删除过期族谱</p>
+          </div>
+        </div>
+        <button onclick="closeClanManagerModal()" class="w-8 h-8 rounded-lg hover:bg-[#dcd3c6]/60 text-[#5c5046] flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+        <!-- 顶部操作栏 -->
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-[#f4efe6] p-3 rounded-xl border border-[#e5dec9]">
+          <div class="text-xs text-[#5c5046]">
+            当前共保存 <strong id="totalBooksCount" class="text-[#9e2a2b]">1</strong> 部族谱（自动保存在您的浏览器本地存储中）
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="createDemoBookInLibrary()" class="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 text-[#5c5046] border border-[#d8cfc4] text-xs font-medium transition flex items-center gap-1">
+              <i class="fa-solid fa-wand-magic-sparkles text-[#9e2a2b]"></i> 生成四世同堂示例谱
+            </button>
+            <button onclick="openNewClanModal()" class="px-3.5 py-1.5 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white text-xs font-medium transition flex items-center gap-1.5 shadow-xs">
+              <i class="fa-solid fa-plus"></i> 新建空白族谱
+            </button>
+          </div>
+        </div>
+
+        <!-- 族谱列表容器 -->
+        <div id="clanBooksListContainer" class="space-y-2.5"></div>
+      </div>
+
+      <div class="px-5 py-3 bg-[#efeae1]/60 border-t border-[#dcd3c6] flex items-center justify-between text-xs">
+        <button onclick="resetSingleOrigin()" class="text-rose-700 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-rotate-left"></i> 重置当前打开的族谱为单人始祖
+        </button>
+        <button onclick="closeClanManagerModal()" class="px-4 py-1.5 rounded-lg bg-[#2c2623] text-white hover:bg-[#3d352e]">
+          完成并关闭
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 新增弹窗 2：新建 / 编辑族谱信息 Modal ==================== -->
+  <div id="newClanModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-[#d8cfc4] rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 bg-[#efeae1] border-b border-[#dcd3c6] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-[#9e2a2b] text-white flex items-center justify-center text-xs">
+            <i class="fa-solid fa-feather-pointed"></i>
+          </span>
+          <h3 id="clanFormModalTitle" class="serif-title font-bold text-base text-[#2c2623]">新建族谱谱籍</h3>
+        </div>
+        <button onclick="closeNewClanModal()" class="w-7 h-7 rounded-lg hover:bg-[#dcd3c6]/60 text-[#5c5046] flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="newClanForm" onsubmit="submitClanBookForm(event)" class="p-5 space-y-3.5 text-xs">
+        <input type="hidden" id="editingBookId" value="">
+
+        <div>
+          <label class="block text-[11px] font-semibold text-[#5c5046] mb-1">族谱名称 (谱名) *</label>
+          <input type="text" id="bookTitleInput" required placeholder="例如：陇西李氏宗谱 / 陈氏家乘" 
+            class="w-full border border-[#d8cfc4] rounded-lg px-3 py-2 focus:outline-none focus:border-[#9e2a2b] bg-white">
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-[#5c5046] mb-1">堂号 / 字辈诗 / 谱籍副标题（选填）</label>
+          <input type="text" id="bookSubtitleInput" placeholder="例如：颖川堂 · 字辈：德泽长流远，诗书继世昌" 
+            class="w-full border border-[#d8cfc4] rounded-lg px-3 py-2 focus:outline-none focus:border-[#9e2a2b] bg-white">
+        </div>
+
+        <!-- 仅在新建族谱时显示的始祖/第一人设置 -->
+        <div id="newClanFounderSection" class="p-3.5 rounded-xl bg-[#f4efe6] border border-[#e5dec9] space-y-3">
+          <div class="font-bold text-[#9e2a2b] flex items-center gap-1.5">
+            <i class="fa-solid fa-user-tie"></i> 始迁祖 / 中心第一人信息
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">第一人姓名 *</label>
+              <input type="text" id="founderNameInput" placeholder="如：李世民 / 陈元光" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">性别</label>
+              <select id="founderGenderInput" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white">
+                <option value="M">男 (乾)</option>
+                <option value="F">女 (坤)</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">出生年份</label>
+              <input type="number" id="founderYearInput" placeholder="如 1945" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-[#7a6f64] mb-1">称谓 / 备注</label>
+              <input type="text" id="founderCourtesyInput" value="一世始祖 · 中心人物" class="w-full border border-[#d8cfc4] rounded-lg px-2.5 py-1.5 bg-white">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#efeae1]">
+          <button type="button" onclick="closeNewClanModal()" class="px-4 py-1.5 rounded-lg border border-[#d8cfc4] text-[#5c5046] hover:bg-stone-100">
+            取消
+          </button>
+          <button type="submit" class="px-5 py-1.5 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white font-medium shadow-sm">
+            保存并启用
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 新增弹窗 3：导出 PDF 族谱画卷 / 高清图 / JSON 备份中心 ==================== -->
+  <div id="exportCenterModal" class="fixed inset-0 bg-black/45 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-[#d8cfc4] rounded-2xl max-w-xl w-full shadow-2xl overflow-hidden">
+      <div class="px-5 py-4 bg-[#efeae1] border-b border-[#dcd3c6] flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-[#9e2a2b] text-white flex items-center justify-center text-sm">
+            <i class="fa-solid fa-file-export"></i>
+          </span>
+          <div>
+            <h3 class="serif-title font-bold text-base text-[#2c2623]">导出 PDF 族谱画卷与数据备份</h3>
+            <p class="text-[11px] text-[#7a6f64]">支持导出宣纸风 PDF 世系图、世系名录典籍、高清 PNG 及 JSON 备份</p>
+          </div>
+        </div>
+        <button onclick="closeExportCenterModal()" class="w-8 h-8 rounded-lg hover:bg-[#dcd3c6]/60 text-[#5c5046] flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <!-- PDF 与图像导出卡片区 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- 选项 1：PDF 世系图谱长卷 + 族人名录 -->
+          <div class="p-4 rounded-xl border-2 border-[#c8b9a6] bg-white hover:border-[#9e2a2b] transition flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded bg-rose-100 text-[#9e2a2b] font-bold text-[10px]">推荐 · 完整装帧</span>
+                <i class="fa-solid fa-file-pdf text-lg text-[#9e2a2b]"></i>
+              </div>
+              <h4 class="serif-title font-bold text-sm text-[#2c2623] mt-2">导出 PDF 族谱画卷 (含名录)</h4>
+              <p class="text-[11px] text-[#7a6f64] mt-1 leading-relaxed">
+                自动生成新中式卷首题跋、完整可视化世系树图，并附带按世代排列的《族人世系生平名录表》多页 PDF。
+              </p>
+            </div>
+            <button id="btnExportPdfFull" onclick="exportFamilyTreePDF(true)" class="w-full py-2 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white font-medium transition flex items-center justify-center gap-1.5 shadow-xs">
+              <i class="fa-solid fa-download"></i> 生成并下载 PDF 族谱
+            </button>
+          </div>
+
+          <!-- 选项 2：高清 PNG 世系图 / 纯画卷打印 -->
+          <div class="p-4 rounded-xl border border-[#dcd3c6] bg-white hover:border-[#2b5973] transition flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded bg-sky-100 text-[#2b5973] font-bold text-[10px]">高清大图 · 分享冲印</span>
+                <i class="fa-solid fa-image text-lg text-[#2b5973]"></i>
+              </div>
+              <h4 class="serif-title font-bold text-sm text-[#2c2623] mt-2">导出高清 PNG 世系全图</h4>
+              <p class="text-[11px] text-[#7a6f64] mt-1 leading-relaxed">
+                将整棵族谱树完整渲染为 2 倍超清宣纸底纹 PNG 长图，适合直接发至家族微信群或大幅写真打印。
+              </p>
+            </div>
+            <button id="btnExportPng" onclick="exportFamilyTreePNG()" class="w-full py-2 rounded-lg bg-[#2b5973] hover:bg-[#1f4357] text-white font-medium transition flex items-center justify-center gap-1.5 shadow-xs">
+              <i class="fa-solid fa-camera"></i> 导出高清 PNG 全图
+            </button>
+          </div>
+        </div>
+
+        <!-- 浏览器原生矢量打印 PDF 备用通道 -->
+        <div class="p-3.5 rounded-xl bg-[#f4efe6] border border-[#e5dec9] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <div class="font-semibold text-[#2c2623] flex items-center gap-1.5">
+              <i class="fa-solid fa-print text-[#9e2a2b]"></i> 矢量级浏览器原生打印 / 另存为 PDF
+            </div>
+            <div class="text-[11px] text-[#7a6f64] mt-0.5">
+              若族谱节点极多，可使用系统打印驱动直接输出无限放大的矢量文字典籍版 PDF。
+            </div>
+          </div>
+          <button onclick="printVectorClanBook()" class="px-3.5 py-1.5 rounded-lg bg-white hover:bg-stone-100 text-[#3d352e] border border-[#c8b9a6] font-medium shrink-0 transition">
+            打印 / 另存矢量 PDF
+          </button>
+        </div>
+
+        <!-- JSON 数据文件导入导出备份 -->
+        <div class="pt-3 border-t border-[#efeae1]">
+          <div class="font-bold text-[#5c5046] mb-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-database text-[#2b5973]"></i> 本地 JSON 数字化工程文件备份与恢复
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="exportData(false)" class="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 border border-[#d8cfc4] text-[#3d352e] flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-file-code text-[#9e2a2b]"></i> 导出当前族谱 (.json)
+            </button>
+            <button onclick="exportData(true)" class="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 border border-[#d8cfc4] text-[#3d352e] flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-box-archive text-[#2b5973]"></i> 导出全部族谱库 (.json)
+            </button>
+            <label class="px-3 py-1.5 rounded-lg bg-white hover:bg-stone-100 border border-[#d8cfc4] text-[#3d352e] flex items-center gap-1.5 cursor-pointer transition">
+              <i class="fa-solid fa-upload text-emerald-700"></i> 导入 JSON 族谱文件
+              <input type="file" accept=".json" class="hidden" onchange="importData(event)">
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 新增弹窗 4：怎么做成网页或者微信小程序 实战指南 ==================== -->
+  <div id="deployGuideModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+    <div class="bg-[#fdfbf7] border border-[#d8cfc4] rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div class="px-5 py-4 bg-[#efeae1] border-b border-[#dcd3c6] flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span class="w-8 h-8 rounded-lg bg-[#2b5973] text-white flex items-center justify-center text-sm">
+            <i class="fa-solid fa-laptop-code"></i>
+          </span>
+          <div>
+            <h3 class="serif-title font-bold text-base text-[#2c2623]">怎么把族谱做成独立网页或微信小程序？</h3>
+            <p class="text-[11px] text-[#7a6f64]">从零成本静态托管、微信小程序转化到多人云端协同的完整落地指南</p>
+          </div>
+        </div>
+        <button onclick="closeDeployGuideModal()" class="w-8 h-8 rounded-lg hover:bg-[#dcd3c6]/60 text-[#5c5046] flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- 顶部选项卡切换 -->
+      <div class="flex border-b border-[#dcd3c6] bg-[#f4efe6] px-5 pt-2 gap-2 text-xs font-semibold">
+        <button onclick="switchGuideTab('web')" id="tabBtn_web" class="px-4 py-2 rounded-t-lg bg-[#fdfbf7] text-[#9e2a2b] border-t border-x border-[#dcd3c6] -mb-[1px]">
+          1. 发布为独立网页 (5分钟零成本)
+        </button>
+        <button onclick="switchGuideTab('mp')" id="tabBtn_mp" class="px-4 py-2 rounded-t-lg text-[#5c5046] hover:text-[#2c2623]">
+          2. 制作为微信小程序 (两种方案)
+        </button>
+        <button onclick="switchGuideTab('cloud')" id="tabBtn_cloud" class="px-4 py-2 rounded-t-lg text-[#5c5046] hover:text-[#2c2623]">
+          3. 宗亲多人共同修谱 (云数据库)
+        </button>
+      </div>
+
+      <!-- 指南内容滚动区 -->
+      <div class="p-5 overflow-y-auto flex-1 text-xs leading-relaxed space-y-4 text-[#3d352e]">
+        
+        <!-- Tab 1: 做成独立网页 -->
+        <div id="guideContent_web" class="space-y-4">
+          <div class="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-950">
+            <strong>核心优势：</strong> 当前您看到的这个应用已经是一个<strong>单文件自包含的 HTML5 网页 (`index.html`)</strong>，无需配置复杂的后端环境，直接上传到任何静态托管平台即可生成专属网址（可发到家族微信群直接点开使用）。
+          </div>
+
+          <div class="space-y-3">
+            <h4 class="serif-title font-bold text-sm text-[#2c2623] flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-[#9e2a2b] text-white text-[11px] flex items-center justify-center">1</span>
+              方法一：使用 Vercel / Netlify / Cloudflare Pages（推荐，免费且自带 HTTPS）
+            </h4>
+            <ol class="list-decimal list-inside space-y-1.5 pl-2 text-[#5c5046]">
+              <li>将右侧编辑器中的代码保存为电脑上的一个文件夹，文件名命名为 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded text-[#9e2a2b]">index.html</code>。</li>
+              <li>打开 <span class="font-semibold">app.netlify.com/drop</span> 或注册 <span class="font-semibold">Vercel / Cloudflare Pages</span>。</li>
+              <li>直接把包含 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded">index.html</code> 的文件夹拖拽上传，<strong>30 秒内即可获得一个永久免费的 HTTPS 网址</strong>（也可以绑定您自己的域名）。</li>
+            </ol>
+
+            <h4 class="serif-title font-bold text-sm text-[#2c2623] flex items-center gap-2 pt-2">
+              <span class="w-5 h-5 rounded-full bg-[#9e2a2b] text-white text-[11px] flex items-center justify-center">2</span>
+              方法二：使用 GitHub Pages 或国内 Gitee / 阿里云 OSS
+            </h4>
+            <ol class="list-decimal list-inside space-y-1.5 pl-2 text-[#5c5046]">
+              <li>在 GitHub 创建一个公开仓库（如 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded">family-tree</code>），上传 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded">index.html</code>。</li>
+              <li>进入仓库 <strong>Settings → Pages</strong>，选择 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded">main</code> 分支保存，即可通过 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded">https://您的用户名.github.io/family-tree/</code> 访问。</li>
+              <li>如果在国内希望微信内打开速度极快，可将 <code class="bg-[#efeae1] px-1.5 py-0.5 rounded">index.html</code> 放入<strong>腾讯云静态网站托管</strong>或<strong>阿里云 OSS</strong>。</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Tab 2: 做成微信小程序 -->
+        <div id="guideContent_mp" class="hidden space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div class="p-4 rounded-xl border border-[#dcd3c6] bg-white space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">路线 A · 最快 10 分钟上线</span>
+                <span class="text-[11px] text-[#8c7d70]">适合企业/个体户主体</span>
+              </div>
+              <h4 class="serif-title font-bold text-sm text-[#2c2623]">Web-view 网页容器直嵌方案</h4>
+              <p class="text-[11px] text-[#5c5046]">
+                先把本页面部署到已备案的 HTTPS 域名下，然后在微信小程序中仅需一行代码即可完整嵌套运行：
+              </p>
+              <pre class="bg-[#2c2623] text-[#f8f5f0] p-2.5 rounded-lg text-[10px] overflow-x-auto"><code>&lt;!-- pages/index/index.wxml --&gt;
+&lt;web-view src="https://您的域名.com/index.html"&gt;&lt;/web-view&gt;</code></pre>
+              <p class="text-[10px] text-[#8c7d70]">
+                *注：微信个人主体小程序暂不支持 `web-view` 组件，个人开发者请采用右侧路线 B。
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl border border-[#dcd3c6] bg-white space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded bg-sky-100 text-[#2b5973] font-bold text-[10px]">路线 B · 支持个人开发者</span>
+                <span class="text-[11px] text-[#8c7d70]">Uni-app / 原生 WXML</span>
+              </div>
+              <h4 class="serif-title font-bold text-sm text-[#2c2623]">原生小程序迁移架构</h4>
+              <p class="text-[11px] text-[#5c5046]">
+                本系统的核心算法（<code class="bg-[#efeae1] px-1 rounded">computeFamilyTreeLayout</code> 与数据结构 <code class="bg-[#efeae1] px-1 rounded">people / unions</code>）是纯 JavaScript 逻辑，可 100% 原样复制到小程序中：
+              </p>
+              <ul class="list-disc list-inside text-[11px] text-[#5c5046] space-y-1">
+                <li><strong>画布缩放平移：</strong> 替换为小程序原生 <code class="bg-[#efeae1] px-1 rounded">&lt;movable-area&gt;</code> + <code class="bg-[#efeae1] px-1 rounded">&lt;movable-view scale="true"&gt;</code>。</li>
+                <li><strong>本地存储：</strong> 将 <code class="bg-[#efeae1] px-1 rounded">localStorage</code> 替换为 <code class="bg-[#efeae1] px-1 rounded">wx.setStorageSync</code>。</li>
+                <li><strong>导出海报/PDF：</strong> 使用小程序 <code class="bg-[#efeae1] px-1 rounded">wxml-to-canvas</code> 生成族谱长图保存到手机相册。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: 多人协同与云数据库 -->
+        <div id="guideContent_cloud" class="hidden space-y-4">
+          <div class="p-3.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-950">
+            <strong>为什么需要云端数据库？</strong> 默认情况下，修改保存在当前设备的浏览器缓存中。如果您希望<strong>全家族几十位亲友在各自手机上共同打开同一份族谱、实时添加各自的子女</strong>，只需接入轻量云数据库。
+          </div>
+
+          <div class="space-y-2.5">
+            <h4 class="serif-title font-bold text-sm text-[#2c2623]">改造步骤（仅需修改本代码中的 `saveState()` 与初始化读取函数）：</h4>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="p-3 rounded-xl bg-white border border-[#dcd3c6]">
+                <div class="font-bold text-[#9e2a2b] mb-1">方案 1：微信云开发 (CloudBase)</div>
+                <p class="text-[11px] text-[#5c5046]">
+                  在小程序或网页中开通微信云开发，创建一个 <code class="bg-[#efeae1] px-1 rounded">clan_books</code> 集合。每次调用 <code class="bg-[#efeae1] px-1 rounded">saveState()</code> 时执行 <code class="bg-[#efeae1] px-1 rounded">db.collection('clan_books').doc(bookId).set({ data: state })</code> 即可实现全族实时同步。
+                </p>
+              </div>
+              <div class="p-3 rounded-xl bg-white border border-[#dcd3c6]">
+                <div class="font-bold text-[#2b5973] mb-1">方案 2：Supabase / LeanCloud (免后端)</div>
+                <p class="text-[11px] text-[#5c5046]">
+                  在 HTML 头部引入 Supabase CDN，创建一张含 <code class="bg-[#efeae1] px-1 rounded">id, title, tree_json, edit_password</code> 字段的表，还可为每个族谱设置「修谱口令」，凭口令才允许修改。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="px-5 py-3 bg-[#efeae1]/60 border-t border-[#dcd3c6] flex items-center justify-between text-xs">
+        <span class="text-[#7a6f64]">提示：您也可以先用「导出 JSON」将修好的族谱发给亲友，亲友点击「导入」即可查看。</span>
+        <button onclick="closeDeployGuideModal()" class="px-4 py-1.5 rounded-lg bg-[#2c2623] text-white hover:bg-[#3d352e]">
+          我知道了
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 隐藏的离屏导出画卷与打印容器（用于生成带卷首题跋的 PDF / PNG 及矢量打印） -->
+  <div id="printableBookSection" class="hidden"></div>
+
+  <script>
+    /********************************************************************
+     * 数据模型说明 (Multi-Book Family Tree Graph & Hierarchy Model)
+     * ------------------------------------------------------------------
+     * multiBookStore: {
+     *   activeBookId: 'book_1',
+     *   books: {
+     *     'book_1': {
+     *       id, title, subtitle, updatedAt,
+     *       people: { ... }, unions: { ... }, selectedId, focusId
+     *     }
+     *   }
+     * }
+     ********************************************************************/
+    const STORAGE_KEY_V2 = 'YUANLIU_MULTI_CLAN_BOOKS_V2';
+    const LEGACY_STORAGE_KEY = 'YUANLIU_FAMILY_TREE_V1';
+
+    let library = {
+      activeBookId: null,
+      books: {}
+    };
+
+    // 当前激活族谱的引用 (保持与原有逻辑无缝兼容)
+    let state = {
+      people: {},
+      unions: {},
+      selectedId: null,
+      focusId: null
+    };
+
+    // 画布平移与缩放状态
+    let viewportState = {
+      x: 100,
+      y: 80,
+      scale: 1,
+      isDragging: false,
+      startX: 0,
+      startY: 0
+    };
+
+    // 布局常量参数
+    const LAYOUT_CFG = {
+      cardW: 148,
+      cardH: 88,
+      spouseGap: 36,     // 夫妻卡片横向间距
+      siblingGap: 44,    // 同辈相邻子树间距
+      genGapY: 165       // 世代层垂直间距
+    };
+
+    // 记录最近一次布局后每个人物的中心坐标，用于居中定位
+    let latestNodePositions = {};
+
+    /* ==================== 初始化与多族谱数据迁移 ==================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      initCanvasInteractions();
+      initSearchEvents();
+      initMultiBookLibrary();
+    });
+
+    // 确保任意族谱对象内部至少包含一位有效人物节点，防止空谱导致布局或导出报错
+    function ensureValidBookData(book) {
+      if (!book) return;
+      if (!book.unions || typeof book.unions !== 'object') {
+        book.unions = {};
+      }
+      if (!book.people || typeof book.people !== 'object' || Object.keys(book.people).length === 0) {
+        if (book.id === 'book_demo_su' || (book.title && book.title.includes('苏氏'))) {
+          const demo = buildFourGenDemoBookObject(book.id, book.title || '苏氏家乘·四世同堂', book.subtitle || '眉山堂 · 字辈：文、明、景、念');
+          book.people = demo.people;
+          book.unions = demo.unions;
+          book.selectedId = demo.selectedId;
+          book.focusId = demo.focusId;
+        } else {
+          const surname = book.title ? book.title.trim().charAt(0) : '林';
+          const fallback = buildSingleFounderBookObject(
+            book.id || generateId('book'),
+            book.title || `${surname}氏宗谱`,
+            book.subtitle || '源远流长 · 世系大典',
+            `${surname}怀远`,
+            'M',
+            1960,
+            '一世始祖 · 中心人物'
+          );
+          book.people = fallback.people;
+          book.unions = fallback.unions;
+          book.selectedId = fallback.selectedId;
+          book.focusId = fallback.focusId;
+        }
+      }
+      const pIds = Object.keys(book.people);
+      if (!book.selectedId || !book.people[book.selectedId]) {
+        book.selectedId = pIds[0];
+      }
+      if (!book.focusId || !book.people[book.focusId]) {
+        book.focusId = book.selectedId;
+      }
+    }
+
+    function initMultiBookLibrary() {
+      const savedV2 = localStorage.getItem(STORAGE_KEY_V2);
+      if (savedV2) {
+        try {
+          const parsed = JSON.parse(savedV2);
+          if (parsed && parsed.books && Object.keys(parsed.books).length > 0) {
+            library = parsed;
+            Object.values(library.books).forEach(b => ensureValidBookData(b));
+            const targetId = library.books[library.activeBookId] ? library.activeBookId : Object.keys(library.books)[0];
+            activateClanBook(targetId, true);
+            return;
+          }
+        } catch (e) {
+          console.error('读取多族谱库失败', e);
+        }
+      }
+
+      // 兼容旧版单族谱缓存平滑升级
+      const legacySaved = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacySaved) {
+        try {
+          const parsedLegacy = JSON.parse(legacySaved);
+          if (parsedLegacy && parsedLegacy.people && Object.keys(parsedLegacy.people).length > 0) {
+            const firstPerson = parsedLegacy.people[parsedLegacy.focusId] || Object.values(parsedLegacy.people)[0];
+            const surname = firstPerson && firstPerson.name ? firstPerson.name.charAt(0) : '源流';
+            const bookId = 'book_legacy_' + Date.now();
+            library.books[bookId] = {
+              id: bookId,
+              title: `${surname}氏宗谱·珍藏本`,
+              subtitle: '传承世系 · 枝繁叶茂',
+              updatedAt: Date.now(),
+              people: parsedLegacy.people,
+              unions: parsedLegacy.unions || {},
+              selectedId: parsedLegacy.selectedId,
+              focusId: parsedLegacy.focusId
+            };
+            library.activeBookId = bookId;
+            saveState();
+            activateClanBook(bookId, true);
+            return;
+          }
+        } catch (e) {
+          console.warn('迁移旧版数据失败', e);
+        }
+      }
+
+      // 首次访问：初始化两部示范族谱（一部四世同堂苏氏家乘 + 一部单人始祖陈氏族谱）供用户体验切换
+      const demoBook = buildFourGenDemoBookObject('book_demo_su', '苏氏家乘·四世同堂', '眉山堂 · 字辈：文、明、景、念');
+      const secondBook = buildSingleFounderBookObject('book_demo_chen', '颖川陈氏宗谱', '德星堂 · 始迁祖世系', '陈元光', 'M', 1955, '开基始祖');
+
+      library.books[demoBook.id] = demoBook;
+      library.books[secondBook.id] = secondBook;
+      library.activeBookId = demoBook.id;
+
+      saveState();
+      activateClanBook(demoBook.id, true);
+    }
+
+    // 构建一部四世同堂示例族谱对象
+    function buildFourGenDemoBookObject(bookId, title, subtitle) {
+      const p = {};
+      const u = {};
+
+      const addP = (id, name, gender, birthYear, courtesy, bio = '', isAlive = true, deathYear = '') => {
+        p[id] = { id, name, gender, birthYear, deathYear, isAlive, courtesy, bio, parentUnionId: null, spouseUnionIds: [] };
+      };
+      const addU = (uid, partners, children) => {
+        u[uid] = { id: uid, partners: [...partners], children: [...children] };
+        partners.forEach(pid => {
+          if (p[pid] && !p[pid].spouseUnionIds.includes(uid)) {
+            p[pid].spouseUnionIds.push(uid);
+          }
+        });
+        children.forEach(cid => {
+          if (p[cid]) p[cid].parentUnionId = uid;
+        });
+      };
+
+      addP('p_gf', '苏文渊', 'M', 1932, '字伯涵 · 一世祖', '世代书香，定居江南。', false, 2016);
+      addP('p_gm', '叶婉清', 'F', 1935, '一品贤淑', '温良恭俭，持家有道。', false, 2019);
+
+      addP('p_uncle', '苏明轩', 'M', 1956, '长子 · 孟房', '酷爱金石书画。');
+      addP('p_father', '苏明远', 'M', 1960, '次子 · 仲房 (中心)', '家族修谱主持者。');
+      addP('p_mother', '周雅琴', 'F', 1962, '仲房正室', '中学高级教师。');
+      addP('p_aunt', '苏明月', 'F', 1966, '长女 · 季房', '旅居海外学者。');
+
+      addP('p_c1', '苏景行', 'M', 1986, '长子 · 景字辈', '建筑设计师。');
+      addP('p_c1_w', '陈若水', 'F', 1988, '景行之妻', '园林设计师。');
+      addP('p_c2', '苏景云', 'F', 1990, '长女 · 景字辈', '临床医师。');
+      addP('p_c3', '苏景曜', 'M', 1994, '次子 · 景字辈', '人工智能研究员。');
+
+      addP('p_g1', '苏念慈', 'F', 2015, '长孙女 · 念字辈', '聪颖好学。');
+      addP('p_g2', '苏念祖', 'M', 2018, '长孙 · 念字辈', '活泼开朗。');
+
+      addU('u_gen1', ['p_gf', 'p_gm'], ['p_uncle', 'p_father', 'p_aunt']);
+      addU('u_gen2', ['p_father', 'p_mother'], ['p_c1', 'p_c2', 'p_c3']);
+      addU('u_gen3', ['p_c1', 'p_c1_w'], ['p_g1', 'p_g2']);
+
+      return {
+        id: bookId,
+        title,
+        subtitle,
+        updatedAt: Date.now(),
+        people: p,
+        unions: u,
+        selectedId: 'p_father',
+        focusId: 'p_father'
+      };
+    }
+
+    // 构建一部单人起点的族谱对象
+    function buildSingleFounderBookObject(bookId, title, subtitle, founderName, founderGender, founderYear, founderCourtesy) {
+      const rootId = 'p_origin_' + Math.random().toString(36).substring(2, 7);
+      return {
+        id: bookId,
+        title: title || `${founderName.charAt(0)}氏宗谱`,
+        subtitle: subtitle || '源远流长 · 世系大典',
+        updatedAt: Date.now(),
+        people: {
+          [rootId]: {
+            id: rootId,
+            name: founderName || '林怀远',
+            gender: founderGender || 'M',
+            birthYear: founderYear ? Number(founderYear) : 1960,
+            deathYear: '',
+            isAlive: true,
+            courtesy: founderCourtesy || '一世始祖 · 中心人物',
+            bio: '点击右侧面板可随时添加父母、配偶、兄弟姐妹及子女。',
+            parentUnionId: null,
+            spouseUnionIds: []
+          }
+        },
+        unions: {},
+        selectedId: rootId,
+        focusId: rootId
+      };
+    }
+
+    // 激活并切换到指定族谱
+    function activateClanBook(bookId, fitDelay = true) {
+      const book = library.books[bookId];
+      if (!book) return;
+
+      ensureValidBookData(book);
+
+      library.activeBookId = bookId;
+      state.people = book.people;
+      state.unions = book.unions;
+      state.selectedId = book.selectedId;
+      state.focusId = book.focusId;
+
+      // 更新顶部标题栏展示
+      document.getElementById('currentBookTitleDisplay').textContent = book.title || '未命名族谱';
+      document.getElementById('currentBookNoteDisplay').textContent = book.subtitle || '点击人物卡片添加血亲姻亲 · 拖拽调整长幼排行';
+
+      saveState();
+      renderAll();
+      if (fitDelay) {
+        setTimeout(fitFullTree, 60);
+      }
+    }
+
+    function saveState() {
+      try {
+        if (library.activeBookId && library.books[library.activeBookId]) {
+          const activeBook = library.books[library.activeBookId];
+          activeBook.people = state.people;
+          activeBook.unions = state.unions;
+          activeBook.selectedId = state.selectedId;
+          activeBook.focusId = state.focusId;
+          activeBook.updatedAt = Date.now();
+        }
+        localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(library));
+      } catch (e) {
+        console.warn('保存至 localStorage 失败', e);
+      }
+    }
+
+    function generateId(prefix = 'p') {
+      return prefix + '_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36).slice(-3);
+    }
+
+    // 重置当前打开的族谱为仅含 1 个中心始祖人物的初始状态
+    function resetSingleOrigin() {
+      const currentBook = library.books[library.activeBookId];
+      const bookName = currentBook ? currentBook.title : '当前族谱';
+      showConfirmDialog(
+        '重置当前族谱为单人始祖',
+        `确定清空《${bookName}》中的所有节点，并从单个中心人物重新开始构建吗？（您的其他族谱不受影响）`,
+        () => {
+          const rootId = generateId('p');
+          const surname = currentBook && currentBook.title ? currentBook.title.charAt(0) : '林';
+          state.people = {
+            [rootId]: {
+              id: rootId,
+              name: `${surname}怀远`,
+              gender: 'M',
+              birthYear: 1965,
+              deathYear: '',
+              isAlive: true,
+              courtesy: '本支始迁祖 · 中心人物',
+              bio: '点击右侧面板可随时添加父母、配偶、兄弟姐妹及子女。',
+              parentUnionId: null,
+              spouseUnionIds: []
+            }
+          };
+          state.unions = {};
+          state.selectedId = rootId;
+          state.focusId = rootId;
+          saveState();
+          renderAll();
+          closeClanManagerModal();
+          setTimeout(fitFullTree, 50);
+          showToast(`《${bookName}》已重置为单人始祖节点`);
+        }
+      );
+    }
+
+    /* ==================== 多族谱管理中心逻辑 (新建 / 切换 / 重命名 / 删除) ==================== */
+
+    function openClanManagerModal() {
+      renderClanBooksList();
+      const modal = document.getElementById('clanManagerModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeClanManagerModal() {
+      const modal = document.getElementById('clanManagerModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function renderClanBooksList() {
+      const container = document.getElementById('clanBooksListContainer');
+      const bookIds = Object.keys(library.books);
+      document.getElementById('totalBooksCount').textContent = bookIds.length;
+      container.innerHTML = '';
+
+      // 按最近修改时间排序
+      const sortedBooks = bookIds
+        .map(id => library.books[id])
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+      sortedBooks.forEach(book => {
+        const isCurrent = book.id === library.activeBookId;
+        const memberCount = book.people ? Object.keys(book.people).length : 0;
+        const dateStr = book.updatedAt ? new Date(book.updatedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '刚刚';
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border transition flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+          isCurrent ? 'bg-[#fff9f8] border-2 border-[#9e2a2b] shadow-xs' : 'bg-white border-[#dcd3c6] hover:border-[#b5a899]'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-start gap-3 min-w-0 flex-1 cursor-pointer" onclick="switchClanBook('${book.id}')">
+            <div class="w-10 h-10 rounded-xl ${isCurrent ? 'bg-[#9e2a2b] text-white' : 'bg-[#efeae1] text-[#5c5046]'} flex items-center justify-center font-bold serif-title text-base shrink-0 mt-0.5">
+              ${escapeHtml(book.title ? book.title.charAt(0) : '谱')}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="serif-title font-bold text-sm text-[#2c2623] truncate">${escapeHtml(book.title)}</h4>
+                ${isCurrent ? '<span class="px-2 py-0.5 rounded-full bg-[#9e2a2b] text-white text-[10px] font-medium">当前打开</span>' : ''}
+                <span class="px-2 py-0.5 rounded-full bg-[#efeae1] text-[#5c5046] text-[10px]">共 ${memberCount} 人</span>
+              </div>
+              <p class="text-xs text-[#7a6f64] truncate mt-0.5">${escapeHtml(book.subtitle || '暂无堂号或字辈备注')}</p>
+              <div class="text-[10px] text-[#9c8f82] mt-1">最后修订：${dateStr}</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+            ${!isCurrent ? `
+              <button onclick="switchClanBook('${book.id}')" class="px-3 py-1.5 rounded-lg bg-[#2b5973] hover:bg-[#1f4357] text-white text-xs font-medium transition">
+                切换打开
+              </button>
+            ` : ''}
+            <button onclick="openEditClanMetaModal('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-[#f8f5f0] hover:bg-[#efeae1] text-[#5c5046] border border-[#dcd3c6] text-xs transition" title="重命名族谱或修改字辈">
+              <i class="fa-regular fa-pen-to-square"></i> 编辑谱名
+            </button>
+            <button onclick="deleteClanBook('${book.id}')" class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs transition" title="删除此部族谱">
+              <i class="fa-regular fa-trash-can"></i> 删除
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function switchClanBook(bookId) {
+      if (!library.books[bookId]) return;
+      activateClanBook(bookId, true);
+      renderClanBooksList();
+      closeClanManagerModal();
+      showToast(`已切换至《${library.books[bookId].title}》`);
+    }
+
+    // 在谱籍库中一键新增一部四世同堂示例谱
+    function createDemoBookInLibrary() {
+      const newId = generateId('book');
+      const demoBook = buildFourGenDemoBookObject(newId, '苏氏家乘·四世同堂 (示例)', '眉山堂 · 字辈：文、明、景、念');
+      library.books[newId] = demoBook;
+      activateClanBook(newId, true);
+      renderClanBooksList();
+      showToast('已生成并打开新的四世同堂示例族谱');
+    }
+
+    // 打开新建空白族谱弹窗
+    function openNewClanModal() {
+      document.getElementById('newClanForm').reset();
+      document.getElementById('editingBookId').value = '';
+      document.getElementById('clanFormModalTitle').textContent = '新建独立族谱';
+      document.getElementById('newClanFounderSection').classList.remove('hidden');
+      document.getElementById('founderNameInput').required = true;
+      document.getElementById('founderCourtesyInput').value = '一世始祖 · 中心人物';
+
+      const modal = document.getElementById('newClanModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // 打开重命名/编辑族谱名称弹窗
+    function openEditClanMetaModal(bookId) {
+      const book = library.books[bookId];
+      if (!book) return;
+
+      document.getElementById('editingBookId').value = bookId;
+      document.getElementById('clanFormModalTitle').textContent = '编辑族谱名称与堂号';
+      document.getElementById('bookTitleInput').value = book.title || '';
+      document.getElementById('bookSubtitleInput').value = book.subtitle || '';
+      document.getElementById('newClanFounderSection').classList.add('hidden');
+      document.getElementById('founderNameInput').required = false;
+
+      const modal = document.getElementById('newClanModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeNewClanModal() {
+      const modal = document.getElementById('newClanModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // 提交新建或重命名族谱表单
+    function submitClanBookForm(e) {
+      e.preventDefault();
+      const editingId = document.getElementById('editingBookId').value;
+      const title = document.getElementById('bookTitleInput').value.trim();
+      const subtitle = document.getElementById('bookSubtitleInput').value.trim();
+
+      if (!title) return;
+
+      if (editingId && library.books[editingId]) {
+        // 修改已有族谱元信息
+        library.books[editingId].title = title;
+        library.books[editingId].subtitle = subtitle;
+        library.books[editingId].updatedAt = Date.now();
+        saveState();
+        if (library.activeBookId === editingId) {
+          document.getElementById('currentBookTitleDisplay').textContent = title;
+          document.getElementById('currentBookNoteDisplay').textContent = subtitle || '点击人物卡片添加血亲姻亲 · 拖拽调整长幼排行';
+        }
+        renderClanBooksList();
+        closeNewClanModal();
+        showToast(`已更新谱名：《${title}》`);
+      } else {
+        // 创建新族谱
+        const founderName = document.getElementById('founderNameInput').value.trim() || '林怀远';
+        const founderGender = document.getElementById('founderGenderInput').value;
+        const founderYear = document.getElementById('founderYearInput').value.trim();
+        const founderCourtesy = document.getElementById('founderCourtesyInput').value.trim();
+
+        const newBookId = generateId('book');
+        const newBook = buildSingleFounderBookObject(
+          newBookId,
+          title,
+          subtitle,
+          founderName,
+          founderGender,
+          founderYear,
+          founderCourtesy
+        );
+
+        library.books[newBookId] = newBook;
+        activateClanBook(newBookId, true);
+        renderClanBooksList();
+        closeNewClanModal();
+        closeClanManagerModal();
+        showToast(`已创建新族谱《${title}》，始祖：${founderName}`);
+      }
+    }
+
+    // 删除指定族谱
+    function deleteClanBook(bookId) {
+      const book = library.books[bookId];
+      if (!book) return;
+
+      const allBookIds = Object.keys(library.books);
+
+      showConfirmDialog(
+        `删除族谱《${book.title}》`,
+        allBookIds.length <= 1
+          ? `《${book.title}》是当前最后一部族谱。删除后系统将自动为您创建一个全新的空白族谱，确定删除吗？`
+          : `确定永久删除《${book.title}》及其包含的 ${Object.keys(book.people || {}).length} 位族人数据吗？此操作不可撤销。`,
+        () => {
+          delete library.books[bookId];
+          const remainingIds = Object.keys(library.books);
+
+          if (remainingIds.length === 0) {
+            const freshId = generateId('book');
+            library.books[freshId] = buildSingleFounderBookObject(
+              freshId,
+              '新修宗谱',
+              '源远流长 · 世系大典',
+              '林怀远',
+              'M',
+              1965,
+              '一世始祖'
+            );
+            activateClanBook(freshId, true);
+          } else if (library.activeBookId === bookId) {
+            activateClanBook(remainingIds[0], true);
+          } else {
+            saveState();
+          }
+
+          renderClanBooksList();
+          showToast(`已删除族谱《${book.title}》`);
+        }
+      );
+    }
+
+    /* ==================== 核心亲属添加逻辑 ==================== */
+
+    // 打开快捷添加弹窗
+    function openQuickAddModal(mode) {
+      const current = state.people[state.selectedId];
+      if (!current) return;
+
+      document.getElementById('quickAddMode').value = mode;
+      const modal = document.getElementById('addRelativeModal');
+      const titleEl = document.getElementById('modalTitle');
+      const subEl = document.getElementById('modalSubtitle');
+      const parentsDual = document.getElementById('parentsDualInputs');
+      const singleInputs = document.getElementById('singleRelativeInputs');
+      const childUnionWrap = document.getElementById('childParentUnionWrap');
+      const insertPosWrap = document.getElementById('insertPositionWrap');
+
+      // 重置输入框
+      document.getElementById('quickAddForm').reset();
+      parentsDual.classList.add('hidden');
+      singleInputs.classList.remove('hidden');
+      childUnionWrap.classList.add('hidden');
+      insertPosWrap.classList.add('hidden');
+
+      const familySurname = current.name ? current.name.charAt(0) : '';
+
+      if (mode === 'parents') {
+        // 检查是否已有父母完整节点
+        if (current.parentUnionId) {
+          const pUnion = state.unions[current.parentUnionId];
+          if (pUnion && pUnion.partners && pUnion.partners.length >= 2) {
+            showToast('该人物已有父母节点，可直接点击其父母卡片编辑');
+            return;
+          }
+        }
+        parentsDual.classList.remove('hidden');
+        singleInputs.classList.add('hidden');
+        titleEl.textContent = `为【${current.name}】添加父母`;
+        subEl.innerHTML = `将在 <strong>${current.name}</strong> 的上一世代创建父亲与母亲节点，并自动建立父子/母子世系连接。`;
+        document.getElementById('addFatherName').value = familySurname;
+        if (current.birthYear) {
+          document.getElementById('addFatherYear').value = Number(current.birthYear) - 26;
+          document.getElementById('addMotherYear').value = Number(current.birthYear) - 24;
+        }
+      } 
+      else if (mode === 'spouse') {
+        titleEl.textContent = `为【${current.name}】添加配偶`;
+        subEl.innerHTML = `配偶将与 <strong>${current.name}</strong> 同代并排展示，并以朱砂婚姻连线相系。`;
+        document.getElementById('addSingleGender').value = current.gender === 'M' ? 'F' : 'M';
+        if (current.birthYear) {
+          document.getElementById('addSingleBirthYear').value = current.birthYear;
+        }
+        document.getElementById('addSingleCourtesy').value = current.gender === 'M' ? '正室 / 配偶' : '夫婿 / 配偶';
+      } 
+      else if (mode === 'sibling') {
+        titleEl.textContent = `为【${current.name}】添加同胞兄弟姐妹`;
+        subEl.innerHTML = `将与 <strong>${current.name}</strong> 共享同一父母世系，支持自由选择长幼排位。`;
+        insertPosWrap.classList.remove('hidden');
+        document.getElementById('optBeforeCurrent').classList.remove('hidden');
+        document.getElementById('optAfterCurrent').classList.remove('hidden');
+        document.getElementById('insertOrderSelect').value = 'after_current';
+        document.getElementById('addSingleName').value = familySurname;
+        if (current.birthYear) {
+          document.getElementById('addSingleBirthYear').value = Number(current.birthYear) + 2;
+        }
+        document.getElementById('addSingleCourtesy').value = '同胞手足';
+      } 
+      else if (mode === 'child') {
+        titleEl.textContent = `为【${current.name}】添加子女`;
+        subEl.innerHTML = `将在 <strong>${current.name}</strong> 的下一世代添加子女节点，并可在右侧面板随时调整长幼排序。`;
+        insertPosWrap.classList.remove('hidden');
+        document.getElementById('optBeforeCurrent').classList.add('hidden');
+        document.getElementById('optAfterCurrent').classList.add('hidden');
+        document.getElementById('insertOrderSelect').value = 'last';
+        document.getElementById('addSingleName').value = familySurname;
+        if (current.birthYear) {
+          document.getElementById('addSingleBirthYear').value = Number(current.birthYear) + 25;
+        }
+        document.getElementById('addSingleCourtesy').value = '之子 / 之女';
+
+        // 如果当前人物有多个婚姻单元，允许选择挂在哪个婚姻下
+        if (current.spouseUnionIds && current.spouseUnionIds.length > 1) {
+          childUnionWrap.classList.remove('hidden');
+          const sel = document.getElementById('childUnionSelect');
+          sel.innerHTML = '';
+          current.spouseUnionIds.forEach((uid, idx) => {
+            const u = state.unions[uid];
+            const partnerNames = u.partners
+              .map(pid => state.people[pid]?.name || '未知')
+              .join(' & ');
+            const opt = document.createElement('option');
+            opt.value = uid;
+            opt.textContent = `家庭 ${idx + 1}：${partnerNames}`;
+            sel.appendChild(opt);
+          });
+        }
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeQuickAddModal() {
+      const modal = document.getElementById('addRelativeModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    // 提交创建亲属节点
+    function submitQuickAdd(e) {
+      e.preventDefault();
+      const mode = document.getElementById('quickAddMode').value;
+      const current = state.people[state.selectedId];
+      if (!current) return;
+
+      if (mode === 'parents') {
+        const fName = document.getElementById('addFatherName').value.trim();
+        const fYear = document.getElementById('addFatherYear').value.trim();
+        const mName = document.getElementById('addMotherName').value.trim();
+        const mYear = document.getElementById('addMotherYear').value.trim();
+
+        if (!fName && !mName) {
+          showToast('请至少填写父亲或母亲的姓名');
+          return;
+        }
+
+        // 如果当前人物已有虚拟的同胞连接点 (无名父母 union)，直接把父母注入该 union
+        let targetUnion = current.parentUnionId ? state.unions[current.parentUnionId] : null;
+        if (!targetUnion) {
+          const newUid = generateId('u');
+          targetUnion = { id: newUid, partners: [], children: [current.id] };
+          state.unions[newUid] = targetUnion;
+          current.parentUnionId = newUid;
+        }
+
+        if (fName) {
+          const fid = generateId('p');
+          state.people[fid] = {
+            id: fid,
+            name: fName,
+            gender: 'M',
+            birthYear: fYear ? Number(fYear) : '',
+            deathYear: '',
+            isAlive: true,
+            courtesy: '严父',
+            bio: '',
+            parentUnionId: null,
+            spouseUnionIds: [targetUnion.id]
+          };
+          targetUnion.partners.push(fid);
+        }
+
+        if (mName) {
+          const mid = generateId('p');
+          state.people[mid] = {
+            id: mid,
+            name: mName,
+            gender: 'F',
+            birthYear: mYear ? Number(mYear) : '',
+            deathYear: '',
+            isAlive: true,
+            courtesy: '慈母',
+            bio: '',
+            parentUnionId: null,
+            spouseUnionIds: [targetUnion.id]
+          };
+          targetUnion.partners.push(mid);
+        }
+
+        showToast(`已为 ${current.name} 添加父母节点`);
+      } 
+      else if (mode === 'spouse') {
+        const sName = document.getElementById('addSingleName').value.trim();
+        if (!sName) return;
+        const sGender = document.getElementById('addSingleGender').value;
+        const sYear = document.getElementById('addSingleBirthYear').value.trim();
+        const sCourtesy = document.getElementById('addSingleCourtesy').value.trim();
+
+        const sid = generateId('p');
+        state.people[sid] = {
+          id: sid,
+          name: sName,
+          gender: sGender,
+          birthYear: sYear ? Number(sYear) : '',
+          deathYear: '',
+          isAlive: true,
+          courtesy: sCourtesy || '配偶',
+          bio: '',
+          parentUnionId: null,
+          spouseUnionIds: []
+        };
+
+        // 如果当前人物已有一个单亲家庭（只有本人没有配偶），直接把新配偶并入该家庭
+        let singleParentUnion = (current.spouseUnionIds || [])
+          .map(uid => state.unions[uid])
+          .find(u => u && u.partners.length === 1 && u.partners[0] === current.id);
+
+        if (singleParentUnion) {
+          singleParentUnion.partners.push(sid);
+          state.people[sid].spouseUnionIds.push(singleParentUnion.id);
+        } else {
+          const uid = generateId('u');
+          state.unions[uid] = {
+            id: uid,
+            partners: [current.id, sid],
+            children: []
+          };
+          current.spouseUnionIds.push(uid);
+          state.people[sid].spouseUnionIds.push(uid);
+        }
+
+        showToast(`已添加配偶：${sName}`);
+      } 
+      else if (mode === 'sibling') {
+        const sibName = document.getElementById('addSingleName').value.trim();
+        if (!sibName) return;
+        const sibGender = document.getElementById('addSingleGender').value;
+        const sibYear = document.getElementById('addSingleBirthYear').value.trim();
+        const sibCourtesy = document.getElementById('addSingleCourtesy').value.trim();
+        const insertPos = document.getElementById('insertOrderSelect').value;
+
+        // 若当前人物尚无父母节点，自动为其生成一对默认先祖父母或共祖连接，使同胞兄弟姐妹有共同上源
+        let parentUnion = current.parentUnionId ? state.unions[current.parentUnionId] : null;
+        if (!parentUnion) {
+          const surname = current.name ? current.name.charAt(0) : '某';
+          const autoFatherId = generateId('p');
+          const uid = generateId('u');
+          state.people[autoFatherId] = {
+            id: autoFatherId,
+            name: `${surname}公 (待补全)`,
+            gender: 'M',
+            birthYear: current.birthYear ? Number(current.birthYear) - 26 : '',
+            deathYear: '',
+            isAlive: true,
+            courtesy: '同胞共祖父辈',
+            bio: '添加兄弟姐妹时自动生成的父辈节点，点击可修改真实姓名。',
+            parentUnionId: null,
+            spouseUnionIds: [uid]
+          };
+          parentUnion = {
+            id: uid,
+            partners: [autoFatherId],
+            children: [current.id]
+          };
+          state.unions[uid] = parentUnion;
+          current.parentUnionId = uid;
+        }
+
+        const newSibId = generateId('p');
+        state.people[newSibId] = {
+          id: newSibId,
+          name: sibName,
+          gender: sibGender,
+          birthYear: sibYear ? Number(sibYear) : '',
+          deathYear: '',
+          isAlive: true,
+          courtesy: sibCourtesy || '同胞',
+          bio: '',
+          parentUnionId: parentUnion.id,
+          spouseUnionIds: []
+        };
+
+        const idx = parentUnion.children.indexOf(current.id);
+        if (insertPos === 'first') {
+          parentUnion.children.unshift(newSibId);
+        } else if (insertPos === 'before_current' && idx !== -1) {
+          parentUnion.children.splice(idx, 0, newSibId);
+        } else if (insertPos === 'after_current' && idx !== -1) {
+          parentUnion.children.splice(idx + 1, 0, newSibId);
+        } else {
+          parentUnion.children.push(newSibId);
+        }
+
+        showToast(`已添加同胞手足：${sibName}`);
+      } 
+      else if (mode === 'child') {
+        const cName = document.getElementById('addSingleName').value.trim();
+        if (!cName) return;
+        const cGender = document.getElementById('addSingleGender').value;
+        const cYear = document.getElementById('addSingleBirthYear').value.trim();
+        const cCourtesy = document.getElementById('addSingleCourtesy').value.trim();
+        const insertPos = document.getElementById('insertOrderSelect').value;
+
+        let targetUnion = null;
+        if (current.spouseUnionIds && current.spouseUnionIds.length > 1) {
+          const chosenUid = document.getElementById('childUnionSelect').value;
+          targetUnion = state.unions[chosenUid];
+        } else if (current.spouseUnionIds && current.spouseUnionIds.length === 1) {
+          targetUnion = state.unions[current.spouseUnionIds[0]];
+        }
+
+        // 如果当前人物还没有配偶 union，创建一个单亲家庭 union
+        if (!targetUnion) {
+          const uid = generateId('u');
+          targetUnion = {
+            id: uid,
+            partners: [current.id],
+            children: []
+          };
+          state.unions[uid] = targetUnion;
+          current.spouseUnionIds.push(uid);
+        }
+
+        const cid = generateId('p');
+        state.people[cid] = {
+          id: cid,
+          name: cName,
+          gender: cGender,
+          birthYear: cYear ? Number(cYear) : '',
+          deathYear: '',
+          isAlive: true,
+          courtesy: cCourtesy || (cGender === 'M' ? '之子' : '之女'),
+          bio: '',
+          parentUnionId: targetUnion.id,
+          spouseUnionIds: []
+        };
+
+        if (insertPos === 'first') {
+          targetUnion.children.unshift(cid);
+        } else {
+          targetUnion.children.push(cid);
+        }
+
+        showToast(`已添加子女：${cName}`);
+      }
+
+      closeQuickAddModal();
+      saveState();
+      renderAll();
+    }
+
+    /* ==================== 子女排序与排行管理 ==================== */
+
+    // 获取当前选中人物用于展示子女列表的家庭 Union
+    function getActiveUnionForSelected() {
+      const person = state.people[state.selectedId];
+      if (!person || !person.spouseUnionIds || person.spouseUnionIds.length === 0) return null;
+
+      const selectEl = document.getElementById('unionSelect');
+      if (person.spouseUnionIds.length > 1 && selectEl && selectEl.value && state.unions[selectEl.value]) {
+        return state.unions[selectEl.value];
+      }
+      return state.unions[person.spouseUnionIds[0]] || null;
+    }
+
+    // 根据排行索引和性别生成传统长幼称谓标签
+    function getRankLabel(index, gender, total) {
+      const cnNums = ['长', '次', '三', '四', '五', '六', '七', '八', '九', '十'];
+      const prefix = index < cnNums.length ? cnNums[index] : `第${index + 1}`;
+      const suffix = gender === 'F' ? '女' : '子';
+      return `${prefix}${suffix}`;
+    }
+
+    // 渲染右侧面板的子女排序列表（支持拖拽 + 上移/下移 + 一键按生年排）
+    let draggedChildIndex = null;
+
+    function renderChildrenSortList() {
+      const person = state.people[state.selectedId];
+      const listContainer = document.getElementById('childrenSortList');
+      const unionWrap = document.getElementById('unionSelectorWrap');
+      const unionSelect = document.getElementById('unionSelect');
+      const siblingTip = document.getElementById('siblingOrderTip');
+
+      if (!person) return;
+
+      // 判断是否显示“切换到父母节点排本人与兄弟姐妹”的提示
+      if (person.parentUnionId && state.unions[person.parentUnionId]?.children?.length > 1) {
+        siblingTip.classList.remove('hidden');
+      } else {
+        siblingTip.classList.add('hidden');
+      }
+
+      // 多配偶家庭下拉框
+      if (person.spouseUnionIds && person.spouseUnionIds.length > 1) {
+        unionWrap.classList.remove('hidden');
+        const currentVal = unionSelect.value;
+        unionSelect.innerHTML = '';
+        person.spouseUnionIds.forEach((uid, i) => {
+          const u = state.unions[uid];
+          if (!u) return;
+          const names = u.partners.map(pid => state.people[pid]?.name || '').join(' & ');
+          const opt = document.createElement('option');
+          opt.value = uid;
+          opt.textContent = `婚姻 ${i + 1} (${names})`;
+          unionSelect.appendChild(opt);
+        });
+        if (person.spouseUnionIds.includes(currentVal)) {
+          unionSelect.value = currentVal;
+        }
+      } else {
+        unionWrap.classList.add('hidden');
+      }
+
+      const activeUnion = getActiveUnionForSelected();
+      const childrenIds = activeUnion ? activeUnion.children.filter(cid => state.people[cid]) : [];
+
+      listContainer.innerHTML = '';
+
+      if (childrenIds.length === 0) {
+        listContainer.innerHTML = `
+          <div class="py-5 text-center text-xs text-[#9c8f82] bg-[#f8f5f0] rounded-lg border border-dashed border-[#dcd3c6]">
+            暂无子女节点，点击上方「添加子女」繁衍后代
+          </div>
+        `;
+        return;
+      }
+
+      childrenIds.forEach((cid, idx) => {
+        const child = state.people[cid];
+        const rankText = getRankLabel(idx, child.gender, childrenIds.length);
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-lg bg-[#f8f5f0] hover:bg-[#efeae1] border border-[#e5dec9] transition cursor-move';
+        item.draggable = true;
+
+        // 拖拽排序事件
+        item.addEventListener('dragstart', () => {
+          draggedChildIndex = idx;
+          item.classList.add('dragging-item');
+        });
+        item.addEventListener('dragend', () => {
+          item.classList.remove('dragging-item');
+          draggedChildIndex = null;
+        });
+        item.addEventListener('dragover', (ev) => {
+          ev.preventDefault();
+        });
+        item.addEventListener('drop', (ev) => {
+          ev.preventDefault();
+          if (draggedChildIndex === null || draggedChildIndex === idx) return;
+          reorderChild(activeUnion.id, draggedChildIndex, idx);
+        });
+
+        const genderBadgeClass = child.gender === 'F' ? 'bg-[#a84253]' : 'bg-[#2b5973]';
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <i class="fa-solid fa-grip-vertical text-[#b5a899] text-xs px-1"></i>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${genderBadgeClass}">
+              ${rankText}
+            </span>
+            <button type="button" onclick="selectPerson('${child.id}')" class="text-xs font-semibold text-[#2c2623] hover:text-[#9e2a2b] truncate text-left">
+              ${escapeHtml(child.name)}
+            </button>
+            <span class="text-[11px] text-[#8c7d70] shrink-0">
+              ${child.birthYear ? child.birthYear + '年' : ''}
+            </span>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button type="button" onclick="moveChildStep('${activeUnion.id}', ${idx}, -1)" 
+              ${idx === 0 ? 'disabled' : ''}
+              class="w-6 h-6 rounded hover:bg-white text-[#5c5046] disabled:opacity-30 flex items-center justify-center border border-transparent hover:border-[#d8cfc4]" title="上移（排行靠前/靠左）">
+              <i class="fa-solid fa-arrow-up text-[10px]"></i>
+            </button>
+            <button type="button" onclick="moveChildStep('${activeUnion.id}', ${idx}, 1)" 
+              ${idx === childrenIds.length - 1 ? 'disabled' : ''}
+              class="w-6 h-6 rounded hover:bg-white text-[#5c5046] disabled:opacity-30 flex items-center justify-center border border-transparent hover:border-[#d8cfc4]" title="下移（排行靠后/靠右）">
+              <i class="fa-solid fa-arrow-down text-[10px]"></i>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+    }
+
+    // 上移/下移子女顺序
+    function moveChildStep(unionId, currentIndex, delta) {
+      const targetIndex = currentIndex + delta;
+      reorderChild(unionId, currentIndex, targetIndex);
+    }
+
+    // 执行子女数组位置互换并实时重绘树图
+    function reorderChild(unionId, fromIndex, toIndex) {
+      const u = state.unions[unionId];
+      if (!u || !u.children) return;
+      if (toIndex < 0 || toIndex >= u.children.length) return;
+
+      const moved = u.children.splice(fromIndex, 1)[0];
+      u.children.splice(toIndex, 0, moved);
+
+      saveState();
+      renderAll();
+      showToast('已更新子女长幼排行顺序');
+    }
+
+    // 按出生年份自动对当前人物的子女排序
+    function sortCurrentChildrenByBirthYear() {
+      const activeUnion = getActiveUnionForSelected();
+      if (!activeUnion || !activeUnion.children || activeUnion.children.length < 2) {
+        showToast('需要至少 2 名子女才可排序');
+        return;
+      }
+
+      activeUnion.children.sort((aId, bId) => {
+        const a = state.people[aId];
+        const b = state.people[bId];
+        const yA = a && a.birthYear ? Number(a.birthYear) : 99999;
+        const yB = b && b.birthYear ? Number(b.birthYear) : 99999;
+        return yA - yB;
+      });
+
+      saveState();
+      renderAll();
+      showToast('已按出生年份从早到晚自动排定子女次序');
+    }
+
+    // 快捷跳转至父母节点以调整本人与同胞兄弟姐妹的顺序
+    function selectParentToReorderSiblings() {
+      const current = state.people[state.selectedId];
+      if (!current || !current.parentUnionId) return;
+      const pUnion = state.unions[current.parentUnionId];
+      if (pUnion && pUnion.partners && pUnion.partners.length > 0) {
+        selectPerson(pUnion.partners[0]);
+        centerViewOnSelected();
+        showToast('已切换至父辈节点，可在右侧调整同胞排行');
+      }
+    }
+
+    /* ==================== 树状层次与坐标自动布局算法 ==================== */
+
+    function computeFamilyTreeLayout() {
+      const peopleIds = Object.keys(state.people);
+      if (peopleIds.length === 0) return { nodes: {}, unions: {}, genMap: {}, minGen: 1, maxGen: 1 };
+
+      // 1. 通过 BFS 计算每个人相对于先祖的世代层级 (Generation Level)
+      const genMap = {};
+      const visited = new Set();
+
+      peopleIds.forEach(startId => {
+        if (visited.has(startId)) return;
+        genMap[startId] = 0;
+        visited.add(startId);
+        const queue = [startId];
+
+        while (queue.length > 0) {
+          const currId = queue.shift();
+          const currGen = genMap[currId];
+          const person = state.people[currId];
+          if (!person) continue;
+
+          // 配偶同代
+          (person.spouseUnionIds || []).forEach(uid => {
+            const u = state.unions[uid];
+            if (!u) return;
+            u.partners.forEach(pid => {
+              if (!visited.has(pid)) {
+                visited.add(pid);
+                genMap[pid] = currGen;
+                queue.push(pid);
+              }
+            });
+            // 子女下一代 (+1)
+            u.children.forEach(cid => {
+              if (!visited.has(cid)) {
+                visited.add(cid);
+                genMap[cid] = currGen + 1;
+                queue.push(cid);
+              }
+            });
+          });
+
+          // 父母上一代 (-1) 及同胞兄弟姐妹同代
+          if (person.parentUnionId) {
+            const pu = state.unions[person.parentUnionId];
+            if (pu) {
+              pu.partners.forEach(pid => {
+                if (!visited.has(pid)) {
+                  visited.add(pid);
+                  genMap[pid] = currGen - 1;
+                  queue.push(pid);
+                }
+              });
+              pu.children.forEach(sibId => {
+                if (!visited.has(sibId)) {
+                  visited.add(sibId);
+                  genMap[sibId] = currGen;
+                  queue.push(sibId);
+                }
+              });
+            }
+          }
+        }
+      });
+
+      // 归一化世代编号，使最年长的一代为「第 1 世」
+      let minRawGen = Math.min(...Object.values(genMap));
+      let maxGen = 1;
+      peopleIds.forEach(id => {
+        genMap[id] = genMap[id] - minRawGen + 1;
+        if (genMap[id] > maxGen) maxGen = genMap[id];
+      });
+
+      // 2. 构建递归子树宽度测量与横向排布 (确保子女按数组顺序严格从左到右排列)
+      const placedPeople = new Set();
+      const nodePositions = {};
+      const unionPositions = {};
+
+      // 判断一个人是否是需要在顶层作为子树根起始的人物
+      // 优先选择没有父母节点的顶层先祖开始向下递归布局
+      const sortedPeopleIds = [...peopleIds].sort((a, b) => {
+        if (genMap[a] !== genMap[b]) return genMap[a] - genMap[b];
+        return 0;
+      });
+
+      // 构建家庭子树单元并进行后序遍历计算宽度
+      function buildSubtree(primaryPersonId) {
+        placedPeople.add(primaryPersonId);
+        const person = state.people[primaryPersonId];
+        const unions = (person.spouseUnionIds || [])
+          .map(uid => state.unions[uid])
+          .filter(Boolean);
+
+        // 收集尚未被布局的配偶
+        const spouses = [];
+        unions.forEach(u => {
+          u.partners.forEach(pid => {
+            if (pid !== primaryPersonId && !placedPeople.has(pid) && state.people[pid]) {
+              placedPeople.add(pid);
+              spouses.push(pid);
+            }
+          });
+        });
+
+        // 夫妻并排组的总宽度
+        const coupleCount = 1 + spouses.length;
+        const coupleSpanW = coupleCount * LAYOUT_CFG.cardW + (coupleCount - 1) * LAYOUT_CFG.spouseGap;
+
+        // 按顺序收集所有子女子树
+        const childSubtrees = [];
+        unions.forEach(u => {
+          u.children.forEach(cid => {
+            if (state.people[cid] && !placedPeople.has(cid)) {
+              childSubtrees.push(buildSubtree(cid));
+            }
+          });
+        });
+
+        let childrenTotalW = 0;
+        if (childSubtrees.length > 0) {
+          childrenTotalW = childSubtrees.reduce((acc, st) => acc + st.width, 0) +
+            (childSubtrees.length - 1) * LAYOUT_CFG.siblingGap;
+        }
+
+        const subtreeWidth = Math.max(coupleSpanW, childrenTotalW);
+
+        return {
+          primaryId: primaryPersonId,
+          spouses,
+          unions,
+          coupleSpanW,
+          childrenTotalW,
+          childSubtrees,
+          width: subtreeWidth
+        };
+      }
+
+      function assignCoordinates(subtree, leftX) {
+        const gen = genMap[subtree.primaryId] || 1;
+        const centerY = (gen - 1) * LAYOUT_CFG.genGapY + 90;
+        const centerX = leftX + subtree.width / 2;
+
+        // 排列夫妻卡片
+        const startCoupleX = centerX - subtree.coupleSpanW / 2 + LAYOUT_CFG.cardW / 2;
+        const orderedCouple = [subtree.primaryId, ...subtree.spouses];
+
+        orderedCouple.forEach((pid, idx) => {
+          nodePositions[pid] = {
+            x: startCoupleX + idx * (LAYOUT_CFG.cardW + LAYOUT_CFG.spouseGap),
+            y: centerY,
+            gen: genMap[pid]
+          };
+        });
+
+        // 递归排列下一代子树（严格遵照 children 数组顺序从左到右）
+        if (subtree.childSubtrees.length > 0) {
+          let childCursorX = centerX - subtree.childrenTotalW / 2;
+          subtree.childSubtrees.forEach(childSt => {
+            assignCoordinates(childSt, childCursorX);
+            childCursorX += childSt.width + LAYOUT_CFG.siblingGap;
+          });
+        }
+      }
+
+      let globalCursorX = 80;
+      sortedPeopleIds.forEach(pid => {
+        if (!placedPeople.has(pid)) {
+          const rootTree = buildSubtree(pid);
+          assignCoordinates(rootTree, globalCursorX);
+          globalCursorX += rootTree.width + LAYOUT_CFG.siblingGap * 1.5;
+        }
+      });
+
+      // 计算每个婚姻 Union 的连接锚点坐标
+      Object.values(state.unions).forEach(u => {
+        const validPartners = u.partners.filter(pid => nodePositions[pid]);
+        if (validPartners.length === 0) return;
+
+        const avgX = validPartners.reduce((sum, pid) => sum + nodePositions[pid].x, 0) / validPartners.length;
+        const avgY = validPartners[0] ? nodePositions[validPartners[0]].y : 0;
+        unionPositions[u.id] = { x: avgX, y: avgY };
+      });
+
+      return {
+        nodes: nodePositions,
+        unions: unionPositions,
+        genMap,
+        minGen: 1,
+        maxGen
+      };
+    }
+
+    /* ==================== 渲染视图（画布世代条、SVG 连线、人物卡片、右侧面板） ==================== */
+
+    function renderAll() {
+      // 确保 selectedId 有效
+      const allIds = Object.keys(state.people);
+      if (allIds.length === 0) return;
+      if (!state.selectedId || !state.people[state.selectedId]) {
+        state.selectedId = allIds[0];
+      }
+      if (!state.focusId || !state.people[state.focusId]) {
+        state.focusId = state.selectedId;
+      }
+
+      const layout = computeFamilyTreeLayout();
+      latestNodePositions = layout.nodes;
+
+      renderGenerationBands(layout);
+      renderConnectionsSvg(layout);
+      renderPersonNodes(layout);
+      renderInspectorPanel(layout);
+      updateTopStats(allIds.length, layout.maxGen);
+    }
+
+    // 渲染新中式世代背景横栏（第 1 世、第 2 世...）
+    function renderGenerationBands(layout) {
+      const layer = document.getElementById('generationBandsLayer');
+      layer.innerHTML = '';
+
+      const xs = Object.values(layout.nodes).map(n => n.x);
+      const minX = xs.length ? Math.min(...xs) - 220 : 0;
+      const maxX = xs.length ? Math.max(...xs) + 220 : 1000;
+      const width = Math.max(1200, maxX - minX);
+
+      const cnGenNums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+      for (let g = 1; g <= layout.maxGen; g++) {
+        const centerY = (g - 1) * LAYOUT_CFG.genGapY + 90;
+        const topY = centerY - LAYOUT_CFG.genGapY / 2 + 12;
+        const band = document.createElement('div');
+        band.style.position = 'absolute';
+        band.style.left = `${minX}px`;
+        band.style.top = `${topY}px`;
+        band.style.width = `${width}px`;
+        band.style.height = `${LAYOUT_CFG.genGapY - 24}px`;
+        band.className = 'rounded-2xl border border-[#e3d9c8]/70 bg-[#efeae1]/30 flex items-center px-4';
+
+        const genTitle = cnGenNums[g - 1] ? `第${cnGenNums[g - 1]}世` : `第 ${g} 世`;
+        band.innerHTML = `
+          <div class="flex flex-col items-center justify-center w-8 py-2 rounded-lg bg-[#e5dec9]/80 border border-[#d4c8b4] text-[#5c5046] shadow-2xs">
+            <span class="serif-title font-bold text-xs writing-vertical" style="writing-mode: vertical-rl; letter-spacing: 3px;">${genTitle}</span>
+          </div>
+        `;
+        layer.appendChild(band);
+      }
+    }
+
+    // 渲染婚姻连线与父子垂直折线
+    function renderConnectionsSvg(layout) {
+      const svg = document.getElementById('connectionsSvg');
+      svg.innerHTML = '';
+
+      Object.values(state.unions).forEach(u => {
+        const partners = u.partners.filter(pid => layout.nodes[pid]);
+        const children = u.children.filter(cid => layout.nodes[cid]);
+
+        // 1. 绘制夫妻间婚姻双横线与同心结
+        if (partners.length >= 2) {
+          const sortedP = [...partners].sort((a, b) => layout.nodes[a].x - layout.nodes[b].x);
+          const leftP = layout.nodes[sortedP[0]];
+          const rightP = layout.nodes[sortedP[sortedP.length - 1]];
+
+          // 婚姻红线
+          const marriageLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const dMarriage = `M ${leftP.x} ${leftP.y} L ${rightP.x} ${rightP.y}`;
+          marriageLine.setAttribute('d', dMarriage);
+          marriageLine.setAttribute('stroke', '#c94a4a');
+          marriageLine.setAttribute('stroke-width', '2.5');
+          marriageLine.setAttribute('stroke-dasharray', '4,2');
+          svg.appendChild(marriageLine);
+
+          // 夫妻连线中点同心圆标记
+          const midX = (leftP.x + rightP.x) / 2;
+          const midY = (leftP.y + rightP.y) / 2;
+          const heartCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          heartCircle.setAttribute('cx', midX);
+          heartCircle.setAttribute('cy', midY);
+          heartCircle.setAttribute('r', '7');
+          heartCircle.setAttribute('fill', '#fdfbf7');
+          heartCircle.setAttribute('stroke', '#c94a4a');
+          heartCircle.setAttribute('stroke-width', '2');
+          svg.appendChild(heartCircle);
+        }
+
+        // 2. 绘制从父母(或共祖连接点)到所有子女的世系折线
+        if (children.length > 0 && partners.length > 0) {
+          const sortedP = [...partners].sort((a, b) => layout.nodes[a].x - layout.nodes[b].x);
+          const parentMidX = (layout.nodes[sortedP[0]].x + layout.nodes[sortedP[sortedP.length - 1]].x) / 2;
+          const parentY = layout.nodes[sortedP[0]].y;
+
+          // 如果只有单亲节点，从卡片底部出发；如果有夫妻双人，从夫妻连线中点出发
+          const startY = partners.length >= 2 ? parentY : parentY + LAYOUT_CFG.cardH / 2;
+          const firstChildY = layout.nodes[children[0]].y - LAYOUT_CFG.cardH / 2;
+          const busY = parentY + (firstChildY - parentY) * 0.58;
+
+          // 父母向下垂直干线
+          const stemPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          stemPath.setAttribute('d', `M ${parentMidX} ${startY} L ${parentMidX} ${busY}`);
+          stemPath.setAttribute('stroke', '#6e6259');
+          stemPath.setAttribute('stroke-width', '2');
+          stemPath.setAttribute('fill', 'none');
+          svg.appendChild(stemPath);
+
+          // 子女横向汇流母线 + 每个子女的垂直分支线
+          const childXs = children.map(cid => layout.nodes[cid].x);
+          const minChildX = Math.min(parentMidX, ...childXs);
+          const maxChildX = Math.max(parentMidX, ...childXs);
+
+          if (maxChildX > minChildX) {
+            const busPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            busPath.setAttribute('d', `M ${minChildX} ${busY} L ${maxChildX} ${busY}`);
+            busPath.setAttribute('stroke', '#6e6259');
+            busPath.setAttribute('stroke-width', '2');
+            busPath.setAttribute('fill', 'none');
+            svg.appendChild(busPath);
+          }
+
+          children.forEach(cid => {
+            const cPos = layout.nodes[cid];
+            const childTopY = cPos.y - LAYOUT_CFG.cardH / 2;
+            const dropPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            dropPath.setAttribute('d', `M ${cPos.x} ${busY} L ${cPos.x} ${childTopY}`);
+            dropPath.setAttribute('stroke', '#6e6259');
+            dropPath.setAttribute('stroke-width', '2');
+            dropPath.setAttribute('fill', 'none');
+            svg.appendChild(dropPath);
+
+            // 子女顶部小圆点装饰
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', cPos.x);
+            dot.setAttribute('cy', childTopY);
+            dot.setAttribute('r', '3');
+            dot.setAttribute('fill', '#6e6259');
+            svg.appendChild(dot);
+          });
+        }
+      });
+    }
+
+    // 渲染每个族人卡片节点
+    function renderPersonNodes(layout) {
+      const container = document.getElementById('nodesContainer');
+      container.innerHTML = '';
+
+      Object.keys(state.people).forEach(pid => {
+        const person = state.people[pid];
+        const pos = layout.nodes[pid];
+        if (!pos) return;
+
+        // 计算该人物在其同胞兄弟姐妹中的排行标签（如 长子、次子、长女）
+        let rankBadgeHtml = '';
+        if (person.parentUnionId && state.unions[person.parentUnionId]) {
+          const siblings = state.unions[person.parentUnionId].children;
+          const idx = siblings.indexOf(pid);
+          if (idx !== -1) {
+            const rankLabel = getRankLabel(idx, person.gender, siblings.length);
+            rankBadgeHtml = `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#efeae1] text-[#5c5046] border border-[#dcd3c6]">${rankLabel}</span>`;
+          }
+        }
+
+        const isSelected = state.selectedId === pid;
+        const isFocus = state.focusId === pid;
+        const isFemale = person.gender === 'F';
+
+        const borderColor = isFemale ? 'border-[#d6a2ad]' : 'border-[#9ab3c2]';
+        const topAccentBg = isFemale ? 'bg-[#a84253]' : 'bg-[#2b5973]';
+        const avatarBg = isFemale ? 'bg-[#f7e8eb] text-[#a84253]' : 'bg-[#e6eff5] text-[#2b5973]';
+
+        const card = document.createElement('div');
+        card.style.position = 'absolute';
+        card.style.width = `${LAYOUT_CFG.cardW}px`;
+        card.style.height = `${LAYOUT_CFG.cardH}px`;
+        card.style.left = `${pos.x - LAYOUT_CFG.cardW / 2}px`;
+        card.style.top = `${pos.y - LAYOUT_CFG.cardH / 2}px`;
+
+        card.className = `person-card rounded-xl bg-[#fdfbf7] border-2 ${borderColor} shadow-sm cursor-pointer flex flex-col justify-between overflow-hidden ${isSelected ? 'selected' : ''} ${isFocus ? 'root-focus' : ''} ${!person.isAlive ? 'opacity-85' : ''}`;
+
+        card.onclick = (ev) => {
+          ev.stopPropagation();
+          selectPerson(pid);
+        };
+
+        const firstChar = person.name ? person.name.trim().slice(-1) : '族';
+        const yearDisplay = person.birthYear
+          ? `${person.birthYear}${!person.isAlive && person.deathYear ? ' - ' + person.deathYear : ' - 今'}`
+          : (person.isAlive ? '健在' : '已故');
+
+        card.innerHTML = `
+          <div class="h-1.5 w-full ${topAccentBg}"></div>
+          <div class="p-2.5 flex-1 flex flex-col justify-between">
+            <div class="flex items-start justify-between gap-1.5">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-8 h-8 rounded-lg ${avatarBg} font-bold serif-title text-sm flex items-center justify-center shrink-0 border border-current/15">
+                  ${escapeHtml(firstChar)}
+                </div>
+                <div class="min-w-0">
+                  <div class="serif-title font-bold text-sm text-[#2c2623] truncate leading-tight">
+                    ${escapeHtml(person.name)}
+                  </div>
+                  <div class="text-[10px] text-[#7a6f64] truncate mt-0.5">
+                    ${escapeHtml(person.courtesy || ('第 ' + pos.gen + ' 世'))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-[#efeae1] text-[10px] text-[#8c7d70]">
+              <span>${escapeHtml(yearDisplay)}</span>
+              ${rankBadgeHtml}
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // 渲染右侧详情与控制面板
+    function renderInspectorPanel(layout) {
+      const person = state.people[state.selectedId];
+      if (!person) return;
+
+      const gen = layout.genMap[person.id] || 1;
+      const isFemale = person.gender === 'F';
+
+      const badge = document.getElementById('selectedAvatarBadge');
+      badge.textContent = person.name ? person.name.charAt(0) : '谱';
+      badge.className = `w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm ${isFemale ? 'bg-[#a84253]' : 'bg-[#2b5973]'}`;
+
+      document.getElementById('selectedPersonTitle').textContent = person.name;
+      document.getElementById('selectedGenBadge').textContent = `第 ${gen} 世`;
+
+      // 检查是否已有父母，更新按钮提示文字
+      const parentsSub = document.getElementById('btnParentsSubtext');
+      if (person.parentUnionId && state.unions[person.parentUnionId]?.partners?.length >= 2) {
+        parentsSub.textContent = '已有父母节点';
+      } else if (person.parentUnionId && state.unions[person.parentUnionId]?.partners?.length === 1) {
+        parentsSub.textContent = '可补全另一方父母';
+      } else {
+        parentsSub.textContent = '向上追溯上一世';
+      }
+
+      // 填充表单
+      document.getElementById('editName').value = person.name || '';
+      document.getElementById('editGender').value = person.gender || 'M';
+      document.getElementById('editBirthYear').value = person.birthYear || '';
+      document.getElementById('editIsAlive').value = person.isAlive ? 'true' : 'false';
+      document.getElementById('editDeathYear').value = person.deathYear || '';
+      document.getElementById('editCourtesy').value = person.courtesy || '';
+      document.getElementById('editBio').value = person.bio || '';
+
+      toggleDeathYearInput();
+      renderChildrenSortList();
+    }
+
+    function toggleDeathYearInput() {
+      const isAlive = document.getElementById('editIsAlive').value === 'true';
+      const deathWrap = document.getElementById('deathYearWrap');
+      const titleWrap = document.getElementById('titleSpanWrap');
+      if (isAlive) {
+        deathWrap.classList.add('hidden');
+        titleWrap.className = 'col-span-2';
+      } else {
+        deathWrap.classList.remove('hidden');
+        titleWrap.className = 'col-span-1';
+      }
+    }
+
+    function selectPerson(pid) {
+      if (!state.people[pid]) return;
+      state.selectedId = pid;
+      renderAll();
+    }
+
+    function setAsViewCenter() {
+      if (!state.selectedId) return;
+      state.focusId = state.selectedId;
+      saveState();
+      renderAll();
+      centerViewOnSelected();
+      showToast(`已将【${state.people[state.selectedId].name}】设为中心人物并居中`);
+    }
+
+    // 保存人物生平信息修改
+    function handleProfileSave(e) {
+      e.preventDefault();
+      const person = state.people[state.selectedId];
+      if (!person) return;
+
+      person.name = document.getElementById('editName').value.trim() || person.name;
+      person.gender = document.getElementById('editGender').value;
+      const by = document.getElementById('editBirthYear').value.trim();
+      person.birthYear = by ? Number(by) : '';
+      person.isAlive = document.getElementById('editIsAlive').value === 'true';
+      const dy = document.getElementById('editDeathYear').value.trim();
+      person.deathYear = !person.isAlive && dy ? Number(dy) : '';
+      person.courtesy = document.getElementById('editCourtesy').value.trim();
+      person.bio = document.getElementById('editBio').value.trim();
+
+      saveState();
+      renderAll();
+
+      const ind = document.getElementById('saveIndicator');
+      ind.classList.remove('opacity-0');
+      setTimeout(() => ind.classList.add('opacity-0'), 1800);
+      showToast('人物档案已更新');
+    }
+
+    // 删除人物节点
+    function confirmDeletePerson() {
+      const totalCount = Object.keys(state.people).length;
+      if (totalCount <= 1) {
+        showToast('族谱至少需要保留一位核心人物，无法删除最后一个节点');
+        return;
+      }
+
+      const person = state.people[state.selectedId];
+      if (!person) return;
+
+      showConfirmDialog(
+        `删除人物【${person.name}】`,
+        `确定从族谱中移除「${person.name}」吗？移除后其关联的婚姻或上下代连线会自动清理。`,
+        () => {
+          const delId = person.id;
+
+          // 1. 从父母的 children 列表中移除
+          if (person.parentUnionId && state.unions[person.parentUnionId]) {
+            const pu = state.unions[person.parentUnionId];
+            pu.children = pu.children.filter(cid => cid !== delId);
+            if (pu.partners.length === 0 && pu.children.length === 0) {
+              delete state.unions[person.parentUnionId];
+            }
+          }
+
+          // 2. 从配偶的 unions 中移除
+          (person.spouseUnionIds || []).forEach(uid => {
+            const u = state.unions[uid];
+            if (!u) return;
+            u.partners = u.partners.filter(pid => pid !== delId);
+            if (u.partners.length === 0) {
+              // 如果该家庭已无任何父母，解除其子女的 parentUnionId
+              u.children.forEach(cid => {
+                if (state.people[cid]) state.people[cid].parentUnionId = null;
+              });
+              delete state.unions[uid];
+            }
+          });
+
+          delete state.people[delId];
+          const remainingIds = Object.keys(state.people);
+          state.selectedId = remainingIds[0];
+          if (state.focusId === delId) state.focusId = state.selectedId;
+
+          saveState();
+          renderAll();
+          showToast(`已移除节点：${person.name}`);
+        }
+      );
+    }
+
+    function updateTopStats(total, maxGen) {
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statGen').textContent = maxGen;
+    }
+
+    /* ==================== 画布拖拽、滚轮缩放与自适应居中 ==================== */
+
+    function initCanvasInteractions() {
+      const vp = document.getElementById('canvasViewport');
+
+      vp.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.person-card') || e.target.closest('button')) return;
+        viewportState.isDragging = true;
+        viewportState.startX = e.clientX - viewportState.x;
+        viewportState.startY = e.clientY - viewportState.y;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!viewportState.isDragging) return;
+        viewportState.x = e.clientX - viewportState.startX;
+        viewportState.y = e.clientY - viewportState.startY;
+        applyViewportTransform();
+      });
+
+      window.addEventListener('mouseup', () => {
+        viewportState.isDragging = false;
+      });
+
+      // 触摸屏拖拽支持
+      vp.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.person-card') || e.target.closest('button')) return;
+        if (e.touches.length === 1) {
+          viewportState.isDragging = true;
+          viewportState.startX = e.touches[0].clientX - viewportState.x;
+          viewportState.startY = e.touches[0].clientY - viewportState.y;
+        }
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!viewportState.isDragging || e.touches.length !== 1) return;
+        viewportState.x = e.touches[0].clientX - viewportState.startX;
+        viewportState.y = e.touches[0].clientY - viewportState.startY;
+        applyViewportTransform();
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        viewportState.isDragging = false;
+      });
+
+      // 鼠标滚轮缩放
+      vp.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.1 : -0.1;
+        zoomCanvas(delta, e.clientX, e.clientY);
+      }, { passive: false });
+    }
+
+    function applyViewportTransform() {
+      const el = document.getElementById('canvasTransform');
+      el.style.transform = `translate(${viewportState.x}px, ${viewportState.y}px) scale(${viewportState.scale})`;
+      document.getElementById('zoomLevelText').textContent = `${Math.round(viewportState.scale * 100)}%`;
+    }
+
+    function zoomCanvas(delta, clientX, clientY) {
+      const vp = document.getElementById('canvasViewport');
+      const rect = vp.getBoundingClientRect();
+      const centerX = clientX !== undefined ? clientX - rect.left : rect.width / 2;
+      const centerY = clientY !== undefined ? clientY - rect.top : rect.height / 2;
+
+      const oldScale = viewportState.scale;
+      const newScale = Math.min(1.8, Math.max(0.35, oldScale + delta));
+      if (newScale === oldScale) return;
+
+      // 围绕鼠标位置或中心点缩放
+      viewportState.x = centerX - ((centerX - viewportState.x) / oldScale) * newScale;
+      viewportState.y = centerY - ((centerY - viewportState.y) / oldScale) * newScale;
+      viewportState.scale = newScale;
+      applyViewportTransform();
+    }
+
+    function centerViewOnSelected() {
+      const pos = latestNodePositions[state.selectedId];
+      if (!pos) return;
+      const vp = document.getElementById('canvasViewport');
+      const rect = vp.getBoundingClientRect();
+
+      viewportState.x = rect.width / 2 - pos.x * viewportState.scale;
+      viewportState.y = rect.height / 2 - pos.y * viewportState.scale;
+      applyViewportTransform();
+    }
+
+    function fitFullTree() {
+      const positions = Object.values(latestNodePositions);
+      if (positions.length === 0) return;
+
+      const vp = document.getElementById('canvasViewport');
+      const rect = vp.getBoundingClientRect();
+
+      const minX = Math.min(...positions.map(p => p.x)) - LAYOUT_CFG.cardW;
+      const maxX = Math.max(...positions.map(p => p.x)) + LAYOUT_CFG.cardW;
+      const minY = Math.min(...positions.map(p => p.y)) - LAYOUT_CFG.cardH;
+      const maxY = Math.max(...positions.map(p => p.y)) + LAYOUT_CFG.cardH;
+
+      const treeW = Math.max(300, maxX - minX);
+      const treeH = Math.max(240, maxY - minY);
+
+      const scaleX = (rect.width * 0.86) / treeW;
+      const scaleY = (rect.height * 0.82) / treeH;
+      const targetScale = Math.min(1.15, Math.max(0.45, Math.min(scaleX, scaleY)));
+
+      const treeCenterX = (minX + maxX) / 2;
+      const treeCenterY = (minY + maxY) / 2;
+
+      viewportState.scale = targetScale;
+      viewportState.x = rect.width / 2 - treeCenterX * targetScale;
+      viewportState.y = rect.height / 2 - treeCenterY * targetScale;
+      applyViewportTransform();
+    }
+
+    /* ==================== 搜索定位、导入导出与对话框辅助 ==================== */
+
+    function initSearchEvents() {
+      const input = document.getElementById('searchInput');
+      const dropdown = document.getElementById('searchDropdown');
+
+      input.addEventListener('input', () => {
+        const kw = input.value.trim().toLowerCase();
+        if (!kw) {
+          dropdown.classList.add('hidden');
+          return;
+        }
+        const matches = Object.values(state.people).filter(p =>
+          (p.name && p.name.toLowerCase().includes(kw)) ||
+          (p.courtesy && p.courtesy.toLowerCase().includes(kw))
+        );
+
+        dropdown.innerHTML = '';
+        if (matches.length === 0) {
+          dropdown.innerHTML = `<div class="p-2.5 text-xs text-[#8c7d70]">未找到匹配的族人</div>`;
+        } else {
+          matches.forEach(p => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'w-full text-left px-3 py-2 text-xs hover:bg-[#efeae1] flex items-center justify-between border-b border-[#f4efe6] last:border-none';
+            btn.innerHTML = `
+              <span class="font-semibold text-[#2c2623]">${escapeHtml(p.name)}</span>
+              <span class="text-[10px] text-[#8c7d70]">${escapeHtml(p.courtesy || '')}</span>
+            `;
+            btn.onclick = () => {
+              selectPerson(p.id);
+              centerViewOnSelected();
+              dropdown.classList.add('hidden');
+              input.value = '';
+            };
+            dropdown.appendChild(btn);
+          });
+        }
+        dropdown.classList.remove('hidden');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#searchInput') && !e.target.closest('#searchDropdown')) {
+          dropdown.classList.add('hidden');
+        }
+      });
+    }
+
+    /* ==================== PDF 族谱画卷导出、PNG 长图导出与指南弹窗 ==================== */
+
+    function openExportCenterModal() {
+      const modal = document.getElementById('exportCenterModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeExportCenterModal() {
+      const modal = document.getElementById('exportCenterModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function openDeployGuideModal() {
+      const modal = document.getElementById('deployGuideModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeDeployGuideModal() {
+      const modal = document.getElementById('deployGuideModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function switchGuideTab(tabKey) {
+      ['web', 'mp', 'cloud'].forEach(k => {
+        const btn = document.getElementById(`tabBtn_${k}`);
+        const content = document.getElementById(`guideContent_${k}`);
+        if (k === tabKey) {
+          btn.className = 'px-4 py-2 rounded-t-lg bg-[#fdfbf7] text-[#9e2a2b] border-t border-x border-[#dcd3c6] -mb-[1px]';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2 rounded-t-lg text-[#5c5046] hover:text-[#2c2623]';
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    // 绘制圆角矩形辅助函数
+    function drawRoundedRectPath(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    }
+
+    // 文本超长省略截断辅助函数
+    function fitCanvasText(ctx, text, maxWidth) {
+      const str = String(text || '');
+      if (ctx.measureText(str).width <= maxWidth) return str;
+      let clipped = str;
+      while (clipped.length > 0 && ctx.measureText(clipped + '…').width > maxWidth) {
+        clipped = clipped.slice(0, -1);
+      }
+      return clipped + '…';
+    }
+
+    /**
+     * 核心：使用原生高分屏 2D Canvas 直接绘制完整宣纸族谱画卷
+     * 避免离屏 DOM 克隆或外部样式解析问题，确保 100% 稳定生成高清画卷
+     */
+    async function captureFullTreeCanvas() {
+      // 确保当前状态含有效人物节点
+      if (!state.people || Object.keys(state.people).length === 0) {
+        const activeBook = library.books[library.activeBookId] || Object.values(library.books)[0];
+        if (activeBook) {
+          ensureValidBookData(activeBook);
+          state.people = activeBook.people;
+          state.unions = activeBook.unions;
+          state.selectedId = activeBook.selectedId;
+          state.focusId = activeBook.focusId;
+          renderAll();
+        }
+      }
+
+      const layout = computeFamilyTreeLayout();
+      const positions = Object.values(layout.nodes);
+      if (positions.length === 0) {
+        throw new Error('当前族谱暂无可导出的人物节点');
+      }
+
+      const currentBook = library.books[library.activeBookId] || { title: '源流宗谱', subtitle: '慎终追远 · 世系长卷' };
+
+      // 计算画卷逻辑边界
+      const minX = Math.min(...positions.map(p => p.x)) - LAYOUT_CFG.cardW / 2 - 110;
+      const maxX = Math.max(...positions.map(p => p.x)) + LAYOUT_CFG.cardW / 2 + 110;
+      const maxY = Math.max(...positions.map(p => p.y)) + LAYOUT_CFG.cardH / 2 + 65;
+
+      const outerPad = 28;
+      const headerH = 104;
+      const treeContentW = Math.max(960, maxX - minX);
+      const treeContentH = Math.max(320, maxY + 30);
+
+      const logicalW = treeContentW + outerPad * 2;
+      const logicalH = outerPad * 2 + headerH + treeContentH;
+      const scale = 2; // 2倍超清渲染
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(logicalW * scale);
+      canvas.height = Math.round(logicalH * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      // 1. 宣纸背景与微纹理点阵
+      ctx.fillStyle = '#f8f5f0';
+      ctx.fillRect(0, 0, logicalW, logicalH);
+
+      ctx.fillStyle = '#e5dec9';
+      for (let gx = 16; gx < logicalW; gx += 28) {
+        for (let gy = 16; gy < logicalH; gy += 28) {
+          ctx.fillRect(gx, gy, 1.2, 1.2);
+        }
+      }
+
+      // 2. 外层新中式朱砂双线装裱边框
+      const boxX = outerPad;
+      const boxY = outerPad;
+      const boxW = logicalW - outerPad * 2;
+      const boxH = logicalH - outerPad * 2;
+
+      drawRoundedRectPath(ctx, boxX, boxY, boxW, boxH, 12);
+      ctx.fillStyle = '#f8f5f0';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#9e2a2b';
+      ctx.stroke();
+
+      drawRoundedRectPath(ctx, boxX + 5, boxY + 5, boxW - 10, boxH - 10, 9);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#c89b9b';
+      ctx.stroke();
+
+      // 3. 卷首题跋横幅区
+      ctx.save();
+      drawRoundedRectPath(ctx, boxX + 2, boxY + 2, boxW - 4, headerH, 10);
+      ctx.clip();
+      ctx.fillStyle = '#efeae1';
+      ctx.fillRect(boxX, boxY, boxW, headerH);
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.moveTo(boxX + 2, boxY + headerH);
+      ctx.lineTo(boxX + boxW - 2, boxY + headerH);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#d8cfc4';
+      ctx.stroke();
+
+      // 卷首左侧「谱」字印章
+      const sealX = boxX + 28;
+      const sealY = boxY + 24;
+      drawRoundedRectPath(ctx, sealX, sealY, 56, 56, 10);
+      ctx.fillStyle = '#9e2a2b';
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 28px "Noto Serif SC", "Songti SC", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('谱', sealX + 28, sealY + 29);
+
+      // 卷首谱名与堂号副标题
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#2c2623';
+      ctx.font = 'bold 24px "Noto Serif SC", "Songti SC", serif';
+      ctx.fillText(currentBook.title || '源流宗谱', sealX + 72, boxY + 42);
+
+      ctx.fillStyle = '#7a6f64';
+      ctx.font = '13px "Inter", "PingFang SC", sans-serif';
+      ctx.fillText(currentBook.subtitle || '慎终追远 · 民德归厚 · 源流世系图卷', sealX + 72, boxY + 70);
+
+      // 卷首右侧统计与修谱日期
+      const dateStr = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+      const totalMembers = Object.keys(state.people).length;
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#5c5046';
+      ctx.font = 'bold 13px "Inter", "PingFang SC", sans-serif';
+      ctx.fillText(`入谱宗亲：${totalMembers} 人   |   绵延世代：第 1 世 至 第 ${layout.maxGen} 世`, boxX + boxW - 28, boxY + 42);
+      ctx.font = '12px "Inter", "PingFang SC", sans-serif';
+      ctx.fillStyle = '#7a6f64';
+      ctx.fillText(`修谱奉祀日期：${dateStr}`, boxX + boxW - 28, boxY + 68);
+
+      // 坐标系偏移：将树图居中绘制在画卷主区域
+      const treeOriginX = boxX + (boxW - (maxX - minX)) / 2 - minX;
+      const treeOriginY = boxY + headerH + 18;
+
+      ctx.save();
+      ctx.translate(treeOriginX, treeOriginY);
+
+      // 4. 绘制各世代背景横栏与竖排世代牌
+      const cnGenNums = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+      const bandLeft = minX + 24;
+      const bandWidth = (maxX - minX) - 48;
+
+      for (let g = 1; g <= layout.maxGen; g++) {
+        const centerY = (g - 1) * LAYOUT_CFG.genGapY + 90;
+        const topY = centerY - LAYOUT_CFG.genGapY / 2 + 12;
+        const bandH = LAYOUT_CFG.genGapY - 24;
+
+        drawRoundedRectPath(ctx, bandLeft, topY, bandWidth, bandH, 14);
+        ctx.fillStyle = 'rgba(239, 234, 225, 0.45)';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#e3d9c8';
+        ctx.stroke();
+
+        // 左侧世代印记牌
+        const tagX = bandLeft + 14;
+        const tagY = centerY - 38;
+        drawRoundedRectPath(ctx, tagX, tagY, 28, 76, 7);
+        ctx.fillStyle = '#e5dec9';
+        ctx.fill();
+        ctx.strokeStyle = '#d4c8b4';
+        ctx.stroke();
+
+        const genLabel = cnGenNums[g - 1] ? `第${cnGenNums[g - 1]}世` : `第${g}世`;
+        ctx.fillStyle = '#5c5046';
+        ctx.font = 'bold 12px "Noto Serif SC", serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const chars = genLabel.split('');
+        chars.forEach((ch, idx) => {
+          const cy = tagY + 18 + idx * 20;
+          ctx.fillText(ch, tagX + 14, cy);
+        });
+      }
+
+      // 5. 绘制夫妻婚姻红线与父母子女世系折线
+      Object.values(state.unions).forEach(u => {
+        const partners = (u.partners || []).filter(pid => layout.nodes[pid]);
+        const children = (u.children || []).filter(cid => layout.nodes[cid]);
+
+        if (partners.length >= 2) {
+          const sortedP = [...partners].sort((a, b) => layout.nodes[a].x - layout.nodes[b].x);
+          const leftP = layout.nodes[sortedP[0]];
+          const rightP = layout.nodes[sortedP[sortedP.length - 1]];
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([5, 3]);
+          ctx.moveTo(leftP.x, leftP.y);
+          ctx.lineTo(rightP.x, rightP.y);
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#c94a4a';
+          ctx.stroke();
+          ctx.restore();
+
+          const midX = (leftP.x + rightP.x) / 2;
+          const midY = (leftP.y + rightP.y) / 2;
+          ctx.beginPath();
+          ctx.arc(midX, midY, 6.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#fdfbf7';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#c94a4a';
+          ctx.stroke();
+        }
+
+        if (children.length > 0 && partners.length > 0) {
+          const sortedP = [...partners].sort((a, b) => layout.nodes[a].x - layout.nodes[b].x);
+          const parentMidX = (layout.nodes[sortedP[0]].x + layout.nodes[sortedP[sortedP.length - 1]].x) / 2;
+          const parentY = layout.nodes[sortedP[0]].y;
+
+          const startY = partners.length >= 2 ? parentY : parentY + LAYOUT_CFG.cardH / 2;
+          const firstChildY = layout.nodes[children[0]].y - LAYOUT_CFG.cardH / 2;
+          const busY = parentY + (firstChildY - parentY) * 0.58;
+
+          ctx.strokeStyle = '#6e6259';
+          ctx.lineWidth = 2;
+
+          // 父母向下垂直干线
+          ctx.beginPath();
+          ctx.moveTo(parentMidX, startY);
+          ctx.lineTo(parentMidX, busY);
+          ctx.stroke();
+
+          // 横向汇流母线
+          const childXs = children.map(cid => layout.nodes[cid].x);
+          const minChildX = Math.min(parentMidX, ...childXs);
+          const maxChildX = Math.max(parentMidX, ...childXs);
+          if (maxChildX > minChildX) {
+            ctx.beginPath();
+            ctx.moveTo(minChildX, busY);
+            ctx.lineTo(maxChildX, busY);
+            ctx.stroke();
+          }
+
+          // 各子女垂直分支线与圆点
+          children.forEach(cid => {
+            const cPos = layout.nodes[cid];
+            const childTopY = cPos.y - LAYOUT_CFG.cardH / 2;
+            ctx.beginPath();
+            ctx.moveTo(cPos.x, busY);
+            ctx.lineTo(cPos.x, childTopY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(cPos.x, childTopY, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#6e6259';
+            ctx.fill();
+          });
+        }
+      });
+
+      // 6. 绘制每一位族人卡片节点
+      Object.keys(state.people).forEach(pid => {
+        const person = state.people[pid];
+        const pos = layout.nodes[pid];
+        if (!pos) return;
+
+        const cardX = pos.x - LAYOUT_CFG.cardW / 2;
+        const cardY = pos.y - LAYOUT_CFG.cardH / 2;
+        const isFemale = person.gender === 'F';
+
+        // 卡片阴影与主体底色
+        ctx.save();
+        ctx.shadowColor = 'rgba(44, 38, 35, 0.10)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 3;
+        drawRoundedRectPath(ctx, cardX, cardY, LAYOUT_CFG.cardW, LAYOUT_CFG.cardH, 11);
+        ctx.fillStyle = '#fdfbf7';
+        ctx.fill();
+        ctx.restore();
+
+        // 顶部乾坤性别色带
+        ctx.save();
+        drawRoundedRectPath(ctx, cardX, cardY, LAYOUT_CFG.cardW, LAYOUT_CFG.cardH, 11);
+        ctx.clip();
+        ctx.fillStyle = isFemale ? '#a84253' : '#2b5973';
+        ctx.fillRect(cardX, cardY, LAYOUT_CFG.cardW, 6);
+        ctx.restore();
+
+        // 卡片外边框
+        drawRoundedRectPath(ctx, cardX, cardY, LAYOUT_CFG.cardW, LAYOUT_CFG.cardH, 11);
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = isFemale ? '#d6a2ad' : '#9ab3c2';
+        ctx.stroke();
+
+        // 头像徽标方块
+        const avX = cardX + 10;
+        const avY = cardY + 14;
+        drawRoundedRectPath(ctx, avX, avY, 32, 32, 7);
+        ctx.fillStyle = isFemale ? '#f7e8eb' : '#e6eff5';
+        ctx.fill();
+
+        const firstChar = person.name ? person.name.trim().slice(-1) : '族';
+        ctx.fillStyle = isFemale ? '#a84253' : '#2b5973';
+        ctx.font = 'bold 14px "Noto Serif SC", serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(firstChar, avX + 16, avY + 16.5);
+
+        // 姓名与字辈/世次
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#2c2623';
+        ctx.font = 'bold 14px "Noto Serif SC", serif';
+        ctx.fillText(fitCanvasText(ctx, person.name, 88), avX + 40, avY + 10);
+
+        ctx.fillStyle = '#7a6f64';
+        ctx.font = '10px "Inter", "PingFang SC", sans-serif';
+        const subText = person.courtesy || `第 ${pos.gen} 世`;
+        ctx.fillText(fitCanvasText(ctx, subText, 88), avX + 40, avY + 25);
+
+        // 底部分割线
+        const divY = cardY + LAYOUT_CFG.cardH - 24;
+        ctx.beginPath();
+        ctx.moveTo(cardX + 10, divY);
+        ctx.lineTo(cardX + LAYOUT_CFG.cardW - 10, divY);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#efeae1';
+        ctx.stroke();
+
+        // 生卒年份
+        const yearDisplay = person.birthYear
+          ? `${person.birthYear}${!person.isAlive && person.deathYear ? ' - ' + person.deathYear : ' - 今'}`
+          : (person.isAlive ? '健在' : '已故');
+        ctx.fillStyle = '#8c7d70';
+        ctx.font = '10px "Inter", "PingFang SC", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(yearDisplay, cardX + 10, cardY + LAYOUT_CFG.cardH - 11);
+
+        // 同胞长幼排行角标
+        if (person.parentUnionId && state.unions[person.parentUnionId]) {
+          const siblings = state.unions[person.parentUnionId].children || [];
+          const idx = siblings.indexOf(pid);
+          if (idx !== -1) {
+            const rankLabel = getRankLabel(idx, person.gender, siblings.length);
+            const tagW = Math.max(28, ctx.measureText(rankLabel).width + 10);
+            const tagH = 15;
+            const rX = cardX + LAYOUT_CFG.cardW - 10 - tagW;
+            const rY = cardY + LAYOUT_CFG.cardH - 19;
+
+            drawRoundedRectPath(ctx, rX, rY, tagW, tagH, 4);
+            ctx.fillStyle = '#efeae1';
+            ctx.fill();
+            ctx.lineWidth = 0.8;
+            ctx.strokeStyle = '#dcd3c6';
+            ctx.stroke();
+
+            ctx.fillStyle = '#5c5046';
+            ctx.font = 'bold 9.5px "Inter", "PingFang SC", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(rankLabel, rX + tagW / 2, rY + tagH / 2 + 0.5);
+          }
+        }
+      });
+
+      ctx.restore();
+      return { canvas, layout, currentBook };
+    }
+
+    /**
+     * 使用原生 2D Canvas 直接渲染《世系族人名录考略》表格页，用于 PDF 第二页
+     */
+    function renderDirectoryCanvasPage(currentBook, layout) {
+      const sortedPeople = Object.values(state.people).sort((a, b) => {
+        const gA = layout.genMap[a.id] || 1;
+        const gB = layout.genMap[b.id] || 1;
+        if (gA !== gB) return gA - gB;
+        const xA = layout.nodes[a.id]?.x || 0;
+        const xB = layout.nodes[b.id]?.x || 0;
+        return xA - xB;
+      });
+
+      const pageW = 1060;
+      const rowH = 38;
+      const headerAreaH = 135;
+      const tableHeaderH = 40;
+      const outerPad = 32;
+      const pageH = Math.max(520, outerPad * 2 + headerAreaH + tableHeaderH + sortedPeople.length * rowH + 40);
+      const scale = 2;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = pageW * scale;
+      canvas.height = pageH * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+
+      // 背景与双线边框
+      ctx.fillStyle = '#f8f5f0';
+      ctx.fillRect(0, 0, pageW, pageH);
+
+      const boxX = outerPad;
+      const boxY = outerPad;
+      const boxW = pageW - outerPad * 2;
+      const boxH = pageH - outerPad * 2;
+
+      drawRoundedRectPath(ctx, boxX, boxY, boxW, boxH, 12);
+      ctx.fillStyle = '#fdfbf7';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#9e2a2b';
+      ctx.stroke();
+
+      // 标题区
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#2c2623';
+      ctx.font = 'bold 22px "Noto Serif SC", serif';
+      ctx.fillText(`《${currentBook.title || '源流宗谱'}》世系族人名录考略`, pageW / 2, boxY + 46);
+
+      ctx.fillStyle = '#7a6f64';
+      ctx.font = '12px "Inter", "PingFang SC", sans-serif';
+      ctx.fillText('按世代尊卑与长幼次序编列 · 记载父母渊源、配偶良缘及子嗣传承', pageW / 2, boxY + 76);
+
+      ctx.beginPath();
+      ctx.moveTo(boxX + 24, boxY + 102);
+      ctx.lineTo(boxX + boxW - 24, boxY + 102);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#d8cfc4';
+      ctx.stroke();
+
+      // 表格列定义
+      const tableX = boxX + 24;
+      const tableY = boxY + 120;
+      const tableW = boxW - 48;
+      const cols = [
+        { title: '世次', width: 70 },
+        { title: '姓名', width: 105 },
+        { title: '性别', width: 70 },
+        { title: '字辈 / 称谓', width: 145 },
+        { title: '生卒纪年', width: 135 },
+        { title: '父母', width: 130 },
+        { title: '配偶', width: 115 },
+        { title: '子女（按长幼排序）', width: 178 }
+      ];
+
+      // 绘制表头
+      ctx.fillStyle = '#efeae1';
+      ctx.fillRect(tableX, tableY, tableW, tableHeaderH);
+      ctx.beginPath();
+      ctx.moveTo(tableX, tableY + tableHeaderH);
+      ctx.lineTo(tableX + tableW, tableY + tableHeaderH);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#c8b9a6';
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#3d352e';
+      ctx.font = 'bold 12px "Inter", "PingFang SC", sans-serif';
+      let colCursor = tableX;
+      cols.forEach(c => {
+        ctx.fillText(c.title, colCursor + 10, tableY + tableHeaderH / 2);
+        colCursor += c.width;
+      });
+
+      // 绘制每一行族人档案
+      sortedPeople.forEach((p, idx) => {
+        const rY = tableY + tableHeaderH + idx * rowH;
+        ctx.fillStyle = idx % 2 === 0 ? '#fdfbf7' : '#f6f1e7';
+        ctx.fillRect(tableX, rY, tableW, rowH);
+
+        ctx.beginPath();
+        ctx.moveTo(tableX, rY + rowH);
+        ctx.lineTo(tableX + tableW, rY + rowH);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#e2d9c8';
+        ctx.stroke();
+
+        const gen = layout.genMap[p.id] || 1;
+        let parentsNames = '—';
+        if (p.parentUnionId && state.unions[p.parentUnionId]) {
+          const pNames = state.unions[p.parentUnionId].partners
+            .map(pid => state.people[pid]?.name)
+            .filter(Boolean);
+          if (pNames.length > 0) parentsNames = pNames.join('、');
+        }
+
+        const spousesNames = [];
+        const childrenNames = [];
+        (p.spouseUnionIds || []).forEach(uid => {
+          const u = state.unions[uid];
+          if (!u) return;
+          u.partners.forEach(pid => {
+            if (pid !== p.id && state.people[pid]) spousesNames.push(state.people[pid].name);
+          });
+          u.children.forEach((cid, cIdx) => {
+            const c = state.people[cid];
+            if (c) childrenNames.push(`${cIdx + 1}.${c.name}`);
+          });
+        });
+
+        const lifeStr = p.birthYear
+          ? `${p.birthYear}年—${p.isAlive ? '今' : (p.deathYear ? p.deathYear + '年' : '已故')}`
+          : (p.isAlive ? '健在' : '已故');
+
+        const rowValues = [
+          { text: `第 ${gen} 世`, color: '#9e2a2b', bold: true },
+          { text: p.name || '—', color: '#2c2623', bold: true },
+          { text: p.gender === 'F' ? '女 (坤)' : '男 (乾)', color: p.gender === 'F' ? '#a84253' : '#2b5973' },
+          { text: p.courtesy || '—', color: '#5c5046' },
+          { text: lifeStr, color: '#5c5046' },
+          { text: parentsNames, color: '#5c5046' },
+          { text: spousesNames.join('、') || '—', color: '#5c5046' },
+          { text: childrenNames.join(' ') || '—', color: '#5c5046' }
+        ];
+
+        let cellX = tableX;
+        rowValues.forEach((cell, cIdx) => {
+          const maxW = cols[cIdx].width - 16;
+          ctx.fillStyle = cell.color;
+          ctx.font = `${cell.bold ? 'bold ' : ''}12px "Inter", "PingFang SC", sans-serif`;
+          ctx.fillText(fitCanvasText(ctx, cell.text, maxW), cellX + 10, rY + rowH / 2);
+          cellX += cols[cIdx].width;
+        });
+      });
+
+      return canvas;
+    }
+
+    // 导出高清 PNG 世系长图
+    async function exportFamilyTreePNG() {
+      const btn = document.getElementById('btnExportPng');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在渲染高清画卷...`;
+
+      try {
+        const { canvas, currentBook } = await captureFullTreeCanvas();
+        const dataUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${currentBook.title}_世系全图.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        closeExportCenterModal();
+        showToast('高清 PNG 族谱全图已生成并下载');
+      } catch (err) {
+        console.error(err);
+        showToast('生成图片失败，请重试');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+
+    // 导出完整 PDF 族谱画卷（第1页：世系图谱画卷；第2页：世代族人名录详情）
+    async function exportFamilyTreePDF() {
+      const btn = document.getElementById('btnExportPdfFull');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 正在装帧 PDF 族谱...`;
+
+      try {
+        const { canvas, layout, currentBook } = await captureFullTreeCanvas();
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+        const { jsPDF } = window.jspdf;
+        const pdfW = Math.max(297, Math.round((canvas.width / 2) * 0.264583));
+        const pdfH = Math.max(210, Math.round((canvas.height / 2) * 0.264583));
+        const orientation = pdfW >= pdfH ? 'l' : 'p';
+
+        const pdf = new jsPDF({
+          orientation,
+          unit: 'mm',
+          format: [pdfW, pdfH]
+        });
+
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfW, pdfH);
+
+        // 生成第 2 页：族人世系名录详表 Canvas 并追加到 PDF
+        const dirCanvas = renderDirectoryCanvasPage(currentBook, layout);
+        const dirImgData = dirCanvas.toDataURL('image/jpeg', 0.95);
+        const dirW = Math.round((dirCanvas.width / 2) * 0.264583);
+        const dirH = Math.round((dirCanvas.height / 2) * 0.264583);
+
+        pdf.addPage([dirW, dirH], dirW >= dirH ? 'l' : 'p');
+        pdf.addImage(dirImgData, 'JPEG', 0, 0, dirW, dirH);
+
+        pdf.save(`${currentBook.title}_源流宗谱画卷.pdf`);
+        closeExportCenterModal();
+        showToast('PDF 族谱画卷（含世系图与族人名录）已导出');
+      } catch (err) {
+        console.error('导出 PDF 失败:', err);
+        showToast('导出 PDF 遇到问题，您可使用下方「浏览器矢量打印」');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+
+    // 构建离屏《世系族人名录表》DOM 以供渲染进 PDF 第二页
+    function buildOffscreenDirectoryDOM(currentBook, layout) {
+      const wrap = document.createElement('div');
+      wrap.style.position = 'fixed';
+      wrap.style.left = '-10000px';
+      wrap.style.top = '0';
+      wrap.style.width = '1020px';
+      wrap.style.backgroundColor = '#f8f5f0';
+      wrap.style.padding = '36px';
+      wrap.style.boxSizing = 'border-box';
+      wrap.style.fontFamily = "'Inter', 'Noto Serif SC', sans-serif";
+
+      // 按世代从第1世到第N世排序族人
+      const sortedPeople = Object.values(state.people).sort((a, b) => {
+        const gA = layout.genMap[a.id] || 1;
+        const gB = layout.genMap[b.id] || 1;
+        if (gA !== gB) return gA - gB;
+        const xA = layout.nodes[a.id]?.x || 0;
+        const xB = layout.nodes[b.id]?.x || 0;
+        return xA - xB;
+      });
+
+      const rowsHtml = sortedPeople.map((p, i) => {
+        const gen = layout.genMap[p.id] || 1;
+        // 查找父母姓名
+        let parentsNames = '—';
+        if (p.parentUnionId && state.unions[p.parentUnionId]) {
+          const pNames = state.unions[p.parentUnionId].partners
+            .map(pid => state.people[pid]?.name)
+            .filter(Boolean);
+          if (pNames.length > 0) parentsNames = pNames.join(' 、 ');
+        }
+        // 查找配偶与子女姓名
+        const spousesNames = [];
+        const childrenNames = [];
+        (p.spouseUnionIds || []).forEach(uid => {
+          const u = state.unions[uid];
+          if (!u) return;
+          u.partners.forEach(pid => {
+            if (pid !== p.id && state.people[pid]) spousesNames.push(state.people[pid].name);
+          });
+          u.children.forEach((cid, cIdx) => {
+            const c = state.people[cid];
+            if (c) childrenNames.push(`${cIdx + 1}.${c.name}`);
+          });
+        });
+
+        const lifeStr = p.birthYear
+          ? `${p.birthYear}年 — ${p.isAlive ? '今(健在)' : (p.deathYear ? p.deathYear + '年' : '已故')}`
+          : (p.isAlive ? '健在' : '已故');
+
+        return `
+          <tr style="border-bottom: 1px solid #e2d9c8; background: ${i % 2 === 0 ? '#fdfbf7' : '#f6f1e7'};">
+            <td style="padding: 10px 12px; font-weight: bold; color: #9e2a2b;">第 ${gen} 世</td>
+            <td style="padding: 10px 12px; font-weight: bold; font-size: 14px; color: #2c2623; font-family: 'Noto Serif SC', serif;">${escapeHtml(p.name)}</td>
+            <td style="padding: 10px 12px; color: ${p.gender === 'F' ? '#a84253' : '#2b5973'};">${p.gender === 'F' ? '女 (坤)' : '男 (乾)'}</td>
+            <td style="padding: 10px 12px; color: #5c5046;">${escapeHtml(p.courtesy || '—')}</td>
+            <td style="padding: 10px 12px; color: #5c5046;">${escapeHtml(lifeStr)}</td>
+            <td style="padding: 10px 12px; color: #5c5046;">${escapeHtml(parentsNames)}</td>
+            <td style="padding: 10px 12px; color: #5c5046;">${escapeHtml(spousesNames.join('、') || '—')}</td>
+            <td style="padding: 10px 12px; color: #5c5046;">${escapeHtml(childrenNames.join('  ') || '—')}</td>
+          </tr>
+        `;
+      }).join('');
+
+      wrap.innerHTML = `
+        <div style="border: 3px double #9e2a2b; border-radius: 12px; padding: 28px; background: #fdfbf7;">
+          <div style="text-align: center; border-bottom: 2px solid #d8cfc4; padding-bottom: 16px; margin-bottom: 20px;">
+            <h2 style="font-size: 22px; font-weight: bold; color: #2c2623; font-family: 'Noto Serif SC', serif; letter-spacing: 2px;">
+              《${escapeHtml(currentBook.title)}》世系族人名录考略
+            </h2>
+            <p style="font-size: 12px; color: #7a6f64; margin-top: 6px;">
+              按世代尊卑与长幼次序编列 · 记载父母渊源、配偶良缘及子嗣传承
+            </p>
+          </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+            <thead>
+              <tr style="background: #efeae1; border-bottom: 2px solid #c8b9a6; color: #3d352e;">
+                <th style="padding: 10px 12px;">世次</th>
+                <th style="padding: 10px 12px;">姓名</th>
+                <th style="padding: 10px 12px;">性别</th>
+                <th style="padding: 10px 12px;">字辈 / 称谓</th>
+                <th style="padding: 10px 12px;">生卒纪年</th>
+                <th style="padding: 10px 12px;">父母</th>
+                <th style="padding: 10px 12px;">配偶</th>
+                <th style="padding: 10px 12px;">子女（按长幼排序）</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+      return wrap;
+    }
+
+    // 浏览器原生矢量打印版
+    function printVectorClanBook() {
+      const layout = computeFamilyTreeLayout();
+      const currentBook = library.books[library.activeBookId] || { title: '源流宗谱', subtitle: '' };
+      const printSection = document.getElementById('printableBookSection');
+      const dom = buildOffscreenDirectoryDOM(currentBook, layout);
+      dom.style.position = 'static';
+      dom.style.width = '100%';
+      dom.style.padding = '0';
+
+      printSection.innerHTML = '';
+      printSection.appendChild(dom);
+      printSection.classList.remove('hidden');
+
+      closeExportCenterModal();
+      setTimeout(() => {
+        window.print();
+        printSection.classList.add('hidden');
+      }, 200);
+    }
+
+    // 导出 JSON 族谱备份（支持仅导出当前族谱 或 导出全部族谱库）
+    function exportData(exportAllLibrary = false) {
+      const currentBook = library.books[library.activeBookId];
+      const payload = exportAllLibrary ? library : {
+        ...currentBook,
+        people: state.people,
+        unions: state.unions,
+        selectedId: state.selectedId,
+        focusId: state.focusId
+      };
+
+      const dataStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const fileName = exportAllLibrary
+        ? `源流宗谱_全部谱籍库备份_${new Date().toISOString().slice(0, 10)}.json`
+        : `${currentBook?.title || '家族'}_族谱备份.json`;
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('JSON 族谱备份文件已导出');
+    }
+
+    // 导入 JSON 族谱恢复（自动识别是单部族谱还是多谱籍库）
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && parsed.books && Object.keys(parsed.books).length > 0) {
+            // 导入的是完整多族谱库
+            Object.entries(parsed.books).forEach(([bid, bObj]) => {
+              library.books[bid] = bObj;
+            });
+            const targetId = parsed.activeBookId && library.books[parsed.activeBookId]
+              ? parsed.activeBookId
+              : Object.keys(parsed.books)[0];
+            activateClanBook(targetId, true);
+            closeExportCenterModal();
+            showToast(`成功导入 ${Object.keys(parsed.books).length} 部族谱数据`);
+            return;
+          }
+
+          if (parsed && parsed.people && Object.keys(parsed.people).length > 0) {
+            // 导入的是单部族谱文件，作为一部新族谱加入库中
+            const newBookId = generateId('book');
+            const firstPerson = parsed.people[parsed.focusId] || Object.values(parsed.people)[0];
+            const defaultTitle = parsed.title || `${firstPerson?.name ? firstPerson.name.charAt(0) : '新'}氏宗谱 (导入)`;
+            library.books[newBookId] = {
+              id: newBookId,
+              title: defaultTitle,
+              subtitle: parsed.subtitle || '外部导入族谱数据',
+              updatedAt: Date.now(),
+              people: parsed.people,
+              unions: parsed.unions || {},
+              selectedId: parsed.selectedId || Object.keys(parsed.people)[0],
+              focusId: parsed.focusId || Object.keys(parsed.people)[0]
+            };
+            activateClanBook(newBookId, true);
+            closeExportCenterModal();
+            showToast(`已导入族谱《${defaultTitle}》`);
+            return;
+          }
+
+          showToast('导入失败：JSON 文件格式无效');
+        } catch (err) {
+          showToast('解析 JSON 文件失败，请检查文件格式');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // 自定义确认弹窗
+    function showConfirmDialog(title, message, onConfirm) {
+      const modal = document.getElementById('customDialogModal');
+      document.getElementById('dialogTitle').textContent = title;
+      document.getElementById('dialogMessage').textContent = message;
+
+      const cancelBtn = document.getElementById('dialogCancelBtn');
+      const confirmBtn = document.getElementById('dialogConfirmBtn');
+
+      const close = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      };
+
+      cancelBtn.onclick = close;
+      confirmBtn.onclick = () => {
+        close();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    // 顶部轻提示
+    let toastTimer = null;
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      document.getElementById('toastText').textContent = msg;
+      banner.classList.remove('opacity-0', '-translate-y-2');
+      banner.classList.add('opacity-100', 'translate-y-0');
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        banner.classList.remove('opacity-100', 'translate-y-0');
+        banner.classList.add('opacity-0', '-translate-y-2');
+      }, 2400);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>
