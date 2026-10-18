@@ -38,7 +38,7 @@
           </button>
         </div>
         <div class="flex items-center gap-2">
-          <p id="statsBar" class="text-[11px] text-stone-400">共 4 世 · 17 位族人</p>
+          <p id="statsBar" class="text-[11px] text-stone-400">共 5 世</p>
           <span id="autoSaveIndicator" class="text-[10px] text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-cloud-check"></i>已实时自动保存</span>
         </div>
       </div>
@@ -47,9 +47,15 @@
     <div class="flex items-center space-x-1.5">
       <div class="relative">
         <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-stone-400 text-xs"></i>
-        <input id="searchInput" type="text" placeholder="搜族人姓名/第几世..." class="bg-stone-800 text-xs text-stone-100 pl-7 pr-3 py-1.5 rounded border border-stone-700 focus:outline-none focus:border-amber-500 w-36 xl:w-44" oninput="handleSearch(this.value)" />
+        <input id="searchInput" type="text" placeholder="搜族人姓名/第几世..." class="bg-stone-800 text-xs text-stone-100 pl-7 pr-3 py-1.5 rounded border border-stone-700 focus:outline-none focus:border-amber-500 w-32 xl:w-40" oninput="handleSearch(this.value)" />
         <div id="searchResults" class="hidden absolute left-0 top-9 w-64 bg-white text-stone-800 rounded-lg shadow-xl border border-stone-200 max-h-64 overflow-y-auto z-50"></div>
       </div>
+
+      <!-- 一键隐藏/显示妻子（外姓配偶）开关 -->
+      <button id="toggleSpouseBtn" onclick="toggleHideSpouses()" class="text-xs bg-stone-800 hover:bg-stone-700 text-amber-200 px-2.5 py-1.5 rounded border border-stone-600 transition flex items-center gap-1.5 font-medium" title="一键隐藏或显示嫁入本族的妻子（外姓配偶卡片）">
+        <i id="toggleSpouseIcon" class="fa-solid fa-eye-slash text-amber-400"></i>
+        <span id="toggleSpouseText">隐藏妻子</span>
+      </button>
 
       <!-- 回退 / 重做 / 修改记录按钮组 -->
       <div class="admin-only-block flex items-center bg-stone-800 rounded border border-stone-700 p-0.5">
@@ -59,8 +65,8 @@
         <button id="redoBtn" onclick="redoAction()" disabled class="px-2 py-1 text-xs rounded text-stone-200 hover:bg-stone-700 disabled:opacity-35 disabled:pointer-events-none transition flex items-center gap-1 border-l border-stone-700" title="重做下一步 (Ctrl+Y)">
           <i class="fa-solid fa-rotate-right text-amber-400"></i><span class="hidden xl:inline">重做</span>
         </button>
-        <button onclick="openHistoryModal()" class="px-2.5 py-1 text-xs rounded text-amber-200 hover:bg-stone-700 transition flex items-center gap-1 border-l border-stone-700 font-medium" title="查看修改记录并回退到任意一步">
-          <i class="fa-solid fa-clock-rotate-left"></i><span>修改记录</span>
+        <button onclick="openHistoryModal()" class="px-2 py-1 text-xs rounded text-amber-200 hover:bg-stone-700 transition flex items-center gap-1 border-l border-stone-700 font-medium" title="查看修改记录并回退到任意一步">
+          <i class="fa-solid fa-clock-rotate-left"></i><span class="hidden lg:inline">记录</span>
           <span id="historyCountBadge" class="bg-amber-500/20 text-amber-300 border border-amber-400/30 px-1.5 py-0.2 rounded-full text-[10px]">1</span>
         </button>
       </div>
@@ -93,9 +99,9 @@
               <i class="fa-solid fa-arrow-left-long mr-1"></i>自右向左排（老大在最右 · 最小在最左）
             </span>
           </div>
-          <span class="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            💡 多配偶子女直接从亲生母亲卡片底部引出分色支线，绝不串线
-          </span>
+          <button onclick="toggleHideSpouses()" id="legendSpouseToggle" class="text-[11px] text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded border border-amber-300 font-medium transition cursor-pointer">
+            <i class="fa-solid fa-eye-slash mr-1"></i>点此隐藏/显示妻子(外姓配偶)
+          </button>
         </div>
       </div>
 
@@ -111,8 +117,8 @@
       </button>
 
       <div id="viewport" class="w-full h-full origin-top-left" style="transform: translate(0px, 0px) scale(1);">
-        <svg id="connectionsSvg" class="absolute top-0 left-0 pointer-events-none" style="width: 8000px; height: 6000px; overflow: visible;"></svg>
-        <div id="nodesLayer" class="absolute top-0 left-0" style="width: 8000px; height: 6000px;"></div>
+        <svg id="connectionsSvg" class="absolute top-0 left-0 pointer-events-none" style="width: 10000px; height: 6000px; overflow: visible;"></svg>
+        <div id="nodesLayer" class="absolute top-0 left-0" style="width: 10000px; height: 6000px;"></div>
       </div>
     </main>
 
@@ -161,7 +167,7 @@
           </div>
         </div>
 
-        <!-- 2. 亲属关系与快速切换生母 -->
+        <!-- 2. 亲属关系与快速切换生母/管理配偶 -->
         <div class="space-y-2.5">
           <h3 class="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
             <i class="fa-solid fa-diagram-project text-[#9e2a2b]"></i><span>围绕当前人物添加/绑定亲属</span>
@@ -173,6 +179,7 @@
             <button onclick="openAddRelationModal('sibling')" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-white hover:bg-sky-50 text-stone-800 border border-stone-300 text-xs font-medium"><i class="fa-solid fa-people-arrows text-sky-700"></i><span>添加兄弟姐妹 (同胞)</span></button>
           </div>
 
+          <!-- 上方父母归属 -->
           <div class="bg-white border border-stone-200 rounded-lg p-2.5 text-xs space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-semibold text-stone-700"><i class="fa-solid fa-person-arrow-up-from-line text-amber-700 mr-1"></i>上方父母归属：</span>
@@ -180,6 +187,15 @@
             </div>
             <div id="currentParentsDisplay" class="grid grid-cols-2 gap-1.5 text-xs"></div>
             <div id="quickSwitchMotherBar" class="hidden pt-1.5 border-t border-stone-100"></div>
+          </div>
+
+          <!-- 配偶列表（即使画布开启了“隐藏妻子”，这里也能随时查看或点选编辑妻子信息！） -->
+          <div id="currentSpousesBox" class="bg-white border border-stone-200 rounded-lg p-2.5 text-xs space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-stone-700"><i class="fa-solid fa-heart text-rose-600 mr-1"></i>连理配偶 (妻子/丈夫)：</span>
+              <button onclick="toggleHideSpouses()" class="text-[11px] text-amber-800 hover:underline" id="sideSpouseToggleTip">隐藏/显示配偶卡片</button>
+            </div>
+            <div id="currentSpousesList" class="flex flex-wrap gap-1.5"></div>
           </div>
         </div>
 
@@ -405,7 +421,7 @@
           <span class="text-stone-500">或者重置当前谱籍：</span>
           <div class="flex gap-2">
             <button onclick="resetSingleRoot(); closePublishSyncModal();" class="px-3 py-1.5 rounded border border-stone-300 text-stone-700">单人始祖起点</button>
-            <button onclick="loadDemoTree(); closePublishSyncModal();" class="px-3 py-1.5 rounded border border-stone-300 text-stone-700">四世同堂示例</button>
+            <button onclick="loadDemoTree(); closePublishSyncModal();" class="px-3 py-1.5 rounded border border-stone-300 text-stone-700">恢复默认示例</button>
           </div>
         </div>
       </div>
@@ -446,7 +462,7 @@
       </div>
       <div class="p-5 space-y-3 text-xs">
         <button onclick="exportFamilyPdf()" class="w-full flex items-center justify-between p-3.5 rounded-lg bg-[#9e2a2b] text-white shadow">
-          <div class="text-left"><div class="font-bold text-sm">📜 导出 PDF 族谱画卷</div><div class="text-[11px] text-amber-100/90 mt-0.5">宣纸古籍双线边框，含生母分轨连线与排行</div></div>
+          <div class="text-left"><div class="font-bold text-sm">📜 导出 PDF 族谱画卷</div><div class="text-[11px] text-amber-100/90 mt-0.5">宣纸古籍双线边框，自动同步当前隐藏/显示妻子设置</div></div>
           <i class="fa-solid fa-download text-lg"></i>
         </button>
         <button onclick="exportHighResPng()" class="w-full flex items-center justify-between p-3.5 rounded-lg bg-stone-800 text-amber-100 shadow">
@@ -470,14 +486,14 @@
 
   <script>
     /*__EMBEDDED_SNAPSHOT_START__*/
-    const EMBEDDED_DEFAULT_STORE = {"activeBookId":"book_1792307012596","adminPwdHash":"h_1eff327d","requirePasswordToEdit":true,"books":{"book_1792307012596":{"id":"book_1792307012596","name":"唐氏家族","hall":"敦本堂","people":{"p_1792308248698_53":{"id":"p_1792308248698_53","name":"*","courtesy":"","title":"","gender":"M","generation":1,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":[],"childrenIds":["p_1792308214720_687"]},"p_1792308266860_88":{"id":"p_1792308266860_88","name":"*","courtesy":"","title":"","gender":"M","generation":1,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":[],"childrenIds":["p_1792308288400_913","p_1792308152935_133"]},"p_1792308214720_687":{"id":"p_1792308214720_687","name":"四保","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308248698_53","motherId":null,"spouseIds":[],"childrenIds":["p1"]},"p_1792308288400_913":{"id":"p_1792308288400_913","name":"*","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308266860_88","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792308152935_133":{"id":"p_1792308152935_133","name":"*保","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308266860_88","motherId":null,"spouseIds":[],"childrenIds":["p_1792308200695_571","p_1792308126640_229"]},"p1":{"id":"p1","name":"香弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308214720_687","motherId":null,"spouseIds":[],"childrenIds":["p_1792307054866_608","p_1792307082303_684"]},"p_1792308200695_571":{"id":"p_1792308200695_571","name":"任弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308152935_133","motherId":null,"spouseIds":["p_yushi","p_liushi"],"childrenIds":["p_chunfeng","p_shunfeng","p_jishun","p_jihong","p_jingzhe"]},"p_yushi":{"id":"p_yushi","name":"于氏","courtesy":"","title":"","gender":"F","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":["p_1792308200695_571"],"childrenIds":["p_chunfeng","p_shunfeng","p_jishun","p_jihong"]},"p_liushi":{"id":"p_liushi","name":"刘氏","courtesy":"","title":"","gender":"F","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":["p_1792308200695_571"],"childrenIds":["p_jingzhe"]},"p_1792308126640_229":{"id":"p_1792308126640_229","name":"任财","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308152935_133","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792307054866_608":{"id":"p_1792307054866_608","name":"继贤","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p1","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792307082303_684":{"id":"p_1792307082303_684","name":"舒心","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p1","motherId":null,"spouseIds":[],"childrenIds":[]},"p_chunfeng":{"id":"p_chunfeng","name":"春凤","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_shunfeng":{"id":"p_shunfeng","name":"顺凤","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_jishun":{"id":"p_jishun","name":"继顺","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_jihong":{"id":"p_jihong","name":"继红","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_jingzhe":{"id":"p_jingzhe","name":"靖辙","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_liushi","spouseIds":[],"childrenIds":[]}}}},"updatedAt":1792309500000};
+    const EMBEDDED_DEFAULT_STORE = {"activeBookId":"book_1792307012596","adminPwdHash":"h_1eff327d","requirePasswordToEdit":true,"hideSpouses":false,"books":{"book_1792307012596":{"id":"book_1792307012596","name":"唐氏家族","hall":"敦本堂","people":{"p_1792308248698_53":{"id":"p_1792308248698_53","name":"*","courtesy":"","title":"","gender":"M","generation":1,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":[],"childrenIds":["p_1792308214720_687"]},"p_1792308266860_88":{"id":"p_1792308266860_88","name":"*","courtesy":"","title":"","gender":"M","generation":1,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":[],"childrenIds":["p_1792308288400_913","p_1792308152935_133"]},"p_1792308214720_687":{"id":"p_1792308214720_687","name":"四保","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308248698_53","motherId":null,"spouseIds":[],"childrenIds":["p1","p_liandi"]},"p_1792308288400_913":{"id":"p_1792308288400_913","name":"*","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308266860_88","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792308152935_133":{"id":"p_1792308152935_133","name":"*保","courtesy":"","title":"","gender":"M","generation":2,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308266860_88","motherId":null,"spouseIds":[],"childrenIds":["p_1792308200695_571","p_1792308126640_229"]},"p_liandi":{"id":"p_liandi","name":"连弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308214720_687","motherId":null,"spouseIds":[],"childrenIds":["p_zhangping","p_guoping"]},"p_zhangping":{"id":"p_zhangping","name":"长平","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_liandi","motherId":null,"spouseIds":[],"childrenIds":["p_weikang","p_jianjiao"]},"p_guoping":{"id":"p_guoping","name":"国平","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_liandi","motherId":null,"spouseIds":[],"childrenIds":["p_yuhang","p_yuwei"]},"p_weikang":{"id":"p_weikang","name":"维康","courtesy":"","title":"","gender":"M","generation":5,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_zhangping","motherId":null,"spouseIds":[],"childrenIds":[]},"p_jianjiao":{"id":"p_jianjiao","name":"健娇","courtesy":"","title":"","gender":"F","generation":5,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_zhangping","motherId":null,"spouseIds":[],"childrenIds":[]},"p_yuhang":{"id":"p_yuhang","name":"瑜航","courtesy":"","title":"","gender":"M","generation":5,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_guoping","motherId":null,"spouseIds":[],"childrenIds":[]},"p_yuwei":{"id":"p_yuwei","name":"瑜薇","courtesy":"","title":"","gender":"F","generation":5,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_guoping","motherId":null,"spouseIds":[],"childrenIds":[]},"p1":{"id":"p1","name":"香弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308214720_687","motherId":null,"spouseIds":[],"childrenIds":["p_1792307054866_608","p_1792307082303_684"]},"p_1792308200695_571":{"id":"p_1792308200695_571","name":"任弟","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308152935_133","motherId":null,"spouseIds":["p_yushi","p_liushi"],"childrenIds":["p_chunfeng","p_shunfeng","p_jishun","p_jihong","p_jingzhe"]},"p_yushi":{"id":"p_yushi","name":"于氏","courtesy":"","title":"","gender":"F","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":["p_1792308200695_571"],"childrenIds":["p_chunfeng","p_shunfeng","p_jishun","p_jihong"]},"p_liushi":{"id":"p_liushi","name":"刘氏","courtesy":"","title":"","gender":"F","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":null,"motherId":null,"spouseIds":["p_1792308200695_571"],"childrenIds":["p_jingzhe"]},"p_1792308126640_229":{"id":"p_1792308126640_229","name":"任财","courtesy":"","title":"","gender":"M","generation":3,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308152935_133","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792307054866_608":{"id":"p_1792307054866_608","name":"继贤","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p1","motherId":null,"spouseIds":[],"childrenIds":[]},"p_1792307082303_684":{"id":"p_1792307082303_684","name":"舒心","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p1","motherId":null,"spouseIds":[],"childrenIds":[]},"p_chunfeng":{"id":"p_chunfeng","name":"春凤","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_shunfeng":{"id":"p_shunfeng","name":"顺凤","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_jishun":{"id":"p_jishun","name":"继顺","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_jihong":{"id":"p_jihong","name":"继红","courtesy":"","title":"","gender":"F","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_yushi","spouseIds":[],"childrenIds":[]},"p_jingzhe":{"id":"p_jingzhe","name":"靖辙","courtesy":"","title":"","gender":"M","generation":4,"birthYear":"","deathYear":"今","bio":"","fatherId":"p_1792308200695_571","motherId":"p_liushi","spouseIds":[],"childrenIds":[]}}}},"updatedAt":1792310500000};
     /*__EMBEDDED_SNAPSHOT_END__*/
 
     const STORAGE_KEY = 'YUANLIU_FAMILY_BOOKS_V5';
     const AUTH_SESSION_KEY = 'YUANLIU_ADMIN_UNLOCKED_V5';
     const MAX_HISTORY_STEPS = 50;
 
-    let store = { activeBookId:'book_default', adminPwdHash:simpleHash('888888'), requirePasswordToEdit:true, books:{} };
+    let store = { activeBookId:'book_default', adminPwdHash:simpleHash('888888'), requirePasswordToEdit:true, hideSpouses:false, books:{} };
     let isAdminUnlocked = true;
     let selectedPersonId = null;
     let currentRelModalMode = 'parent';
@@ -504,6 +520,33 @@
       }
       ensureBookHistoryInitialized(b);
       return b;
+    }
+
+    // 一键切换「隐藏/显示外姓妻子（配偶）」
+    function toggleHideSpouses() {
+      store.hideSpouses = !store.hideSpouses;
+      saveStore();
+      renderAll();
+      showToast(store.hideSpouses ? '🙈 已隐藏外姓妻子卡片（丈夫卡片上仍显示配氏，子女保留生母标识）' : '👁️ 已恢复显示所有妻子（配偶）卡片');
+    }
+
+    function updateSpouseToggleButtonUI() {
+      const btn = document.getElementById('toggleSpouseBtn');
+      const icon = document.getElementById('toggleSpouseIcon');
+      const text = document.getElementById('toggleSpouseText');
+      const legendBtn = document.getElementById('legendSpouseToggle');
+      if (!btn || !icon || !text) return;
+      if (store.hideSpouses) {
+        btn.className = 'text-xs bg-amber-700 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded border border-amber-500 transition flex items-center gap-1.5 font-medium shadow';
+        icon.className = 'fa-solid fa-eye text-amber-200';
+        text.textContent = '显示妻子';
+        if (legendBtn) legendBtn.innerHTML = `<i class="fa-solid fa-eye mr-1"></i>当前已隐藏妻子 (点此恢复显示)`;
+      } else {
+        btn.className = 'text-xs bg-stone-800 hover:bg-stone-700 text-amber-200 px-2.5 py-1.5 rounded border border-stone-600 transition flex items-center gap-1.5 font-medium';
+        icon.className = 'fa-solid fa-eye-slash text-amber-400';
+        text.textContent = '隐藏妻子';
+        if (legendBtn) legendBtn.innerHTML = `<i class="fa-solid fa-eye-slash mr-1"></i>点此隐藏妻子(外姓配偶)`;
+      }
     }
 
     function formatTimeStr(ts) {
@@ -979,9 +1022,10 @@
 
     const CARD_W = 158, CARD_H = 92, SPOUSE_GAP = 22, SIBLING_GAP = 42, GEN_ROW_H = 186;
 
+    // 布局引擎：支持 store.hideSpouses 隐藏外姓配偶卡片
     function computeFamilyTreeLayout(people) {
       const allIds = Object.keys(people);
-      if (allIds.length === 0) return { positions:{}, bounds:{ minX:0, maxX:800, minY:0, maxY:600 }, genRows:[] };
+      if (allIds.length === 0) return { positions:{}, bounds:{ minX:0, maxX:800, minY:0, maxY:600 }, genRows:[], hiddenSpouseIds:new Set() };
       const isAttachedSpouse = new Set();
       const primarySpouseMap = {};
 
@@ -1005,7 +1049,17 @@
         }
       });
 
-      function getUnitWidth(id) { return CARD_W + (primarySpouseMap[id] || []).length * (CARD_W + SPOUSE_GAP); }
+      const hideSpouses = !!store.hideSpouses;
+      const hiddenSpouseIds = hideSpouses ? new Set(isAttachedSpouse) : new Set();
+
+      function getVisibleSpouses(id) {
+        if (hideSpouses) return [];
+        return primarySpouseMap[id] || [];
+      }
+
+      function getUnitWidth(id) {
+        return CARD_W + getVisibleSpouses(id).length * (CARD_W + SPOUSE_GAP);
+      }
 
       function getOrderedChildren(id) {
         const p = people[id];
@@ -1041,12 +1095,17 @@
       rootIds.forEach(rid => calcSubtreeWidth(rid));
 
       let minGen = Infinity, maxGen = -Infinity;
-      allIds.forEach(id => { const g = people[id].generation || 1; if (g < minGen) minGen = g; if (g > maxGen) maxGen = g; });
+      allIds.forEach(id => {
+        if (hiddenSpouseIds.has(id)) return;
+        const g = people[id].generation || 1;
+        if (g < minGen) minGen = g;
+        if (g > maxGen) maxGen = g;
+      });
       if (!isFinite(minGen)) { minGen = 1; maxGen = 1; }
 
       const positions = {}, placed = new Set();
       function placeSubtree(id, leftX) {
-        if (placed.has(id)) return;
+        if (placed.has(id) || hiddenSpouseIds.has(id)) return;
         placed.add(id);
         const p = people[id];
         const subW = subtreeWidthMap[id] || getUnitWidth(id);
@@ -1056,7 +1115,7 @@
         const unitRightEdge = leftX + (subW - unitW) / 2 + unitW;
 
         positions[id] = { x:unitRightEdge - CARD_W, y, gen };
-        (primarySpouseMap[id] || []).forEach((sid, idx) => {
+        getVisibleSpouses(id).forEach((sid, idx) => {
           placed.add(sid);
           const spGen = people[sid].generation || gen;
           positions[sid] = { x:unitRightEdge - CARD_W - (idx + 1) * (CARD_W + SPOUSE_GAP), y:80 + (spGen - minGen) * GEN_ROW_H, gen:spGen };
@@ -1077,16 +1136,16 @@
 
       let totalRootsW = 0;
       rootIds.forEach((rid, idx) => { totalRootsW += (subtreeWidthMap[rid] || getUnitWidth(rid)); if (idx < rootIds.length - 1) totalRootsW += SIBLING_GAP * 1.5; });
-      let rootRightCursor = 160 + totalRootsW;
+      let rootRightCursor = 200 + totalRootsW;
       rootIds.forEach(rid => {
         const w = subtreeWidthMap[rid] || getUnitWidth(rid);
         placeSubtree(rid, rootRightCursor - w);
         rootRightCursor -= (w + SIBLING_GAP * 1.5);
       });
 
-      let fallbackX = 160 + totalRootsW + SIBLING_GAP * 1.5;
+      let fallbackX = 200 + totalRootsW + SIBLING_GAP * 1.5;
       allIds.forEach(id => {
-        if (!placed.has(id)) {
+        if (!placed.has(id) && !hiddenSpouseIds.has(id)) {
           const gen = people[id].generation || 1;
           positions[id] = { x:fallbackX, y:80 + (gen - minGen) * GEN_ROW_H, gen };
           fallbackX += CARD_W + SIBLING_GAP;
@@ -1100,9 +1159,11 @@
         if (pos.y < minY) minY = pos.y;
         if (pos.y + CARD_H > maxY) maxY = pos.y + CARD_H;
       });
+      if (!isFinite(minX)) { minX = 0; maxX = 800; minY = 0; maxY = 600; }
+
       const genRows = [];
       for (let g = minGen; g <= maxGen; g++) genRows.push({ gen:g, y:80 + (g - minGen) * GEN_ROW_H });
-      return { positions, bounds:{ minX, maxX, minY, maxY }, genRows };
+      return { positions, bounds:{ minX, maxX, minY, maxY }, genRows, hiddenSpouseIds };
     }
 
     function getBirthOrderDetail(person, people) {
@@ -1135,7 +1196,6 @@
 
     function getBirthOrderBadge(person, people) { return getBirthOrderDetail(person, people).combinedBadge; }
 
-    // 精准计算父母到子女的连线（多配偶家庭直接从亲生母亲卡片底部正中央引出，分色分轨！）
     function computeParentChildConnector(child, people, positions) {
       const childPos = positions[child.id];
       if (!childPos) return null;
@@ -1171,8 +1231,15 @@
         startX = mPos.x + CARD_W / 2;
         startY = mPos.y + CARD_H;
       } else {
+        // 如果开启了「隐藏妻子」，mPos 为 null，自动从父亲卡片底部引出连线（若父亲有多位配偶，仍保留分色以示区别）
         startX = fPos.x + CARD_W / 2;
         startY = fPos.y + CARD_H;
+        if (isMultiSpouseFamily && mother) {
+          const spouseIdx = fatherSpouses.indexOf(mother.id);
+          const palette = ['#9c7a54', '#2b6cb0', '#7b2cbf', '#2d6a4f'];
+          strokeColor = palette[(spouseIdx >= 0 ? spouseIdx : 0) % palette.length];
+          trackOffset = (spouseIdx >= 0 ? spouseIdx : 0) * 10;
+        }
       }
       const baseMidY = fPos ? (fPos.y + CARD_H + (endY - (fPos.y + CARD_H)) * 0.45) : (startY + (endY - startY) * 0.45);
       const midY = Math.min(endY - 14, baseMidY + trackOffset);
@@ -1189,6 +1256,7 @@
       const gens = new Set(allList.map(p => p.generation || 1));
       document.getElementById('statsBar').textContent = `共 ${gens.size} 世 · ${allList.length} 位族人`;
       renderAuthPermissionsUI();
+      updateSpouseToggleButtonUI();
       updateHistoryButtonsUI();
       const layout = computeFamilyTreeLayout(people);
       renderCanvasNodesAndLines(people, layout);
@@ -1220,18 +1288,20 @@
       const svg = document.getElementById('connectionsSvg');
       nodesLayer.innerHTML = ''; svg.innerHTML = '';
       const { positions, bounds, genRows } = layout;
-      const bandLeft = Math.min(40, bounds.minX - 120);
-      const bandRight = Math.max(1100, bounds.maxX + 140);
+
+      // 关键修复：将世代横条左右两侧留白扩大到 左 180px、右 260px，彻底杜绝右侧「+ 第 X 世 (右起居长)」挡住最右侧的族人卡片！
+      const bandLeft = Math.min(20, bounds.minX - 180);
+      const bandRight = Math.max(1150, bounds.maxX + 260);
       const bandWidth = bandRight - bandLeft;
 
       genRows.forEach((row, idx) => {
         const band = document.createElement('div');
-        band.className = 'absolute pointer-events-none flex items-center justify-between px-3';
+        band.className = 'absolute pointer-events-none flex items-center justify-between px-4';
         band.style.left = `${bandLeft}px`; band.style.top = `${row.y - 18}px`;
         band.style.width = `${bandWidth}px`; band.style.height = `${CARD_H + 36}px`;
         band.style.borderBottom = '1px dashed rgba(176, 137, 104, 0.28)';
         if (idx % 2 === 1) band.style.backgroundColor = 'rgba(229, 222, 201, 0.22)';
-        const addBtn = isAdminUnlocked ? `<button onclick="openStandalonePersonModal(${row.gen})" class="w-6 h-6 rounded-full bg-white/90 hover:bg-[#9e2a2b] text-stone-700 hover:text-white border border-stone-300 shadow-sm flex items-center justify-center text-xs"><i class="fa-solid fa-plus text-[10px]"></i></button>` : '';
+        const addBtn = isAdminUnlocked ? `<button onclick="openStandalonePersonModal(${row.gen})" class="w-6 h-6 rounded-full bg-white/95 hover:bg-[#9e2a2b] text-stone-700 hover:text-white border border-stone-300 shadow-sm flex items-center justify-center text-xs" title="直接在此世代新增一位族人"><i class="fa-solid fa-plus text-[10px]"></i></button>` : '';
         band.innerHTML = `
           <div class="flex items-center gap-1.5 pointer-events-auto"><div class="px-2.5 py-1 rounded bg-[#2c2623] text-amber-100 serif-title text-xs font-bold shadow">第 ${row.gen} 世</div>${addBtn}</div>
           <div class="flex items-center gap-1.5 pointer-events-auto">${addBtn}<div class="px-2.5 py-1 rounded bg-[#9e2a2b] text-amber-100 serif-title text-xs font-bold shadow">第 ${row.gen} 世 (右起居长)</div></div>
@@ -1284,6 +1354,12 @@
         const motherName = person.motherId && people[person.motherId] ? people[person.motherId].name : '';
         const parentTagStr = (fatherName && motherName) ? `父:${fatherName}·母:${motherName}` : (fatherName ? `父:${fatherName}` : (motherName ? `母:${motherName}` : ''));
 
+        // 当开启「隐藏妻子」时，在丈夫卡片中间直接显示「配:于氏、刘氏」，不丢任何信息
+        const spouseNames = (person.spouseIds || []).map(sid => people[sid]?.name).filter(Boolean);
+        const spouseInlineBadge = (store.hideSpouses && spouseNames.length > 0)
+          ? `<span class="text-[10px] px-1 rounded bg-rose-50 text-[#a84255] border border-rose-200 font-medium truncate max-w-[90px]" title="配偶：${escapeHtml(spouseNames.join('、'))}">配:${escapeHtml(spouseNames.join('、'))}</span>`
+          : (motherName ? `<span class="text-[10px] px-1 rounded bg-amber-100 text-amber-900 font-medium">母:${escapeHtml(motherName)}</span>` : '');
+
         const card = document.createElement('div');
         card.className = `person-card absolute bg-[#fffdf9] rounded-lg border ${isSelected ? 'selected border-[#9e2a2b]' : 'border-stone-300'} overflow-hidden cursor-pointer select-none`;
         card.style.width = `${CARD_W}px`; card.style.height = `${CARD_H}px`;
@@ -1300,9 +1376,9 @@
                 <span class="text-[10px] px-1.5 py-0.5 ${detail.hasParent ? 'rounded-r' : 'rounded'} font-semibold ${isMale ? 'bg-slate-100 text-[#3b5975]' : 'bg-rose-50 text-[#a84255]'} border border-current/20">${escapeHtml(detail.genderText)}</span>
               </div>
             </div>
-            <div class="text-[11px] text-stone-500 truncate flex items-center justify-between">
-              <span>${escapeHtml(person.courtesy || person.title || `第 ${person.generation} 世`)}</span>
-              ${motherName ? `<span class="text-[10px] px-1 rounded bg-amber-100 text-amber-900 font-medium">母:${escapeHtml(motherName)}</span>` : ''}
+            <div class="text-[11px] text-stone-500 truncate flex items-center justify-between gap-1">
+              <span class="truncate">${escapeHtml(person.courtesy || person.title || `第 ${person.generation} 世`)}</span>
+              ${spouseInlineBadge}
             </div>
             <div class="flex items-center justify-between text-[10px] text-stone-400 border-t border-stone-100 pt-1">
               <span class="truncate">${escapeHtml(parentTagStr || `${person.birthYear || '?'} — ${person.deathYear || '今'}`)}</span>
@@ -1344,6 +1420,19 @@
           ${mother && isAdminUnlocked ? `<button onclick="unbindParent('${p.id}','mother')" class="text-stone-400 hover:text-red-600 ml-1"><i class="fa-solid fa-xmark"></i></button>` : ''}
         </div>
       `;
+
+      // 渲染当前人物的配偶列表（即使画布隐藏了妻子，也可在此点击选中妻子修改名讳或添加妻子）
+      const spousesListEl = document.getElementById('currentSpousesList');
+      const spouses = (p.spouseIds || []).map(sid => people[sid]).filter(Boolean);
+      if (spouses.length === 0) {
+        spousesListEl.innerHTML = `<span class="text-stone-400 text-[11px]">暂无配偶，可点上方「添加/关联配偶」</span>`;
+      } else {
+        spousesListEl.innerHTML = spouses.map(sp => `
+          <span onclick="selectPerson('${sp.id}')" class="px-2 py-1 rounded bg-rose-50 hover:bg-rose-100 text-[#a84255] border border-rose-200 font-bold cursor-pointer flex items-center gap-1">
+            <i class="fa-solid fa-user text-[10px]"></i>${escapeHtml(sp.name)}
+          </span>
+        `).join('');
+      }
 
       const switchMotherBar = document.getElementById('quickSwitchMotherBar');
       const fatherSpouses = father ? (father.spouseIds || []).map(sid => people[sid]).filter(Boolean) : [];
@@ -1747,8 +1836,8 @@
     function centerTree() {
       const { bounds } = computeFamilyTreeLayout(getCurrentBook().people);
       const rect = canvasContainer.getBoundingClientRect();
-      const treeW = Math.max(300, bounds.maxX - bounds.minX + 240);
-      const treeH = Math.max(200, bounds.maxY - bounds.minY + 160);
+      const treeW = Math.max(300, bounds.maxX - bounds.minX + 360);
+      const treeH = Math.max(200, bounds.maxY - bounds.minY + 180);
       viewState.scale = Math.min(1.05, Math.max(0.45, Math.min(rect.width / treeW, rect.height / treeH)));
       viewState.x = (rect.width - (bounds.minX + bounds.maxX) * viewState.scale) / 2;
       viewState.y = 45;
@@ -1834,7 +1923,7 @@
     function renderScrollCanvas() {
       const book = getCurrentBook(), people = book.people;
       const { positions, bounds, genRows } = computeFamilyTreeLayout(people);
-      const padX = 160, padTop = 135, padBottom = 80;
+      const padX = 220, padTop = 135, padBottom = 80;
       const contentW = Math.max(960, bounds.maxX - bounds.minX + padX * 2);
       const contentH = Math.max(560, bounds.maxY - bounds.minY + padTop + padBottom);
       const canvas = document.createElement('canvas');
@@ -1880,8 +1969,11 @@
         ctx.fillText(`${getBirthOrderBadge(p, people)} · 第${p.generation}世`, x + 10, y + 50);
         const fName = p.fatherId && people[p.fatherId] ? people[p.fatherId].name : '';
         const mName = p.motherId && people[p.motherId] ? people[p.motherId].name : '';
+        const spNames = (p.spouseIds || []).map(sid => people[sid]?.name).filter(Boolean);
+        let subText = (fName || mName) ? `父:${fName||'-'} 母:${mName||'-'}` : `${p.birthYear||'?'} - ${p.deathYear||'今'}`;
+        if (store.hideSpouses && spNames.length > 0) subText = `配:${spNames.join('、')} ` + subText;
         ctx.fillStyle = '#78716c'; ctx.font = '11px sans-serif';
-        ctx.fillText((fName || mName) ? `父:${fName||'-'} 母:${mName||'-'}` : `${p.birthYear||'?'} - ${p.deathYear||'今'}`, x + 10, y + 72);
+        ctx.fillText(subText, x + 10, y + 72);
       });
       return { canvas, width:contentW, height:contentH };
     }
