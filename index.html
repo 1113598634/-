@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>源流宗谱 · 全员共享与管理员权限族谱系统</title>
+  <title>源流宗谱 · 传统尚右规制与全员共享族谱系统</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -138,17 +138,18 @@
     <!-- 左侧/中央 可视化世系画布 -->
     <main id="canvasContainer" class="flex-1 canvas-bg relative overflow-hidden cursor-grab active:cursor-grabbing">
       
-      <!-- 左上角字辈与图例浮窗 -->
-      <div class="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-stone-200/80 rounded-lg px-3 py-2 shadow-sm max-w-lg pointer-events-auto">
+      <!-- 左上角字辈与尚右规制图例浮窗 -->
+      <div class="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-stone-200/80 rounded-lg px-3 py-2 shadow-sm max-w-2xl pointer-events-auto">
         <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-stone-600">
           <div class="flex items-center gap-3">
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#3b5975] inline-block"></span>男丁</span>
             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#a84255] inline-block"></span>女眷</span>
-            <span class="flex items-center gap-1"><span class="w-4 h-0.5 bg-[#b08968] inline-block"></span>血缘</span>
-            <span class="flex items-center gap-1"><span class="w-4 h-0.5 border-b border-dashed border-[#d66853] inline-block"></span>连理</span>
+            <span class="flex items-center gap-1 font-semibold text-[#9e2a2b] bg-red-50 px-2 py-0.5 rounded border border-red-200">
+              <i class="fa-solid fa-arrow-left-long mr-1"></i>古籍尚右规制：自右向左排（老大在最右 · 最小在最左）
+            </span>
           </div>
           <span class="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            💡 双击空白处或点右下角「+」可随时随地新增族人
+            💡 卡片角标「排一·长女 / 排二·长子」清晰区分同胞绝对大小
           </span>
         </div>
       </div>
@@ -293,12 +294,12 @@
           </div>
         </div>
 
-        <!-- 3. 子女排行与次序调整 -->
+        <!-- 3. 子女排行与次序调整（以右为长，自右向左排布） -->
         <div class="bg-white border border-stone-200 rounded-lg p-3 space-y-2.5 shadow-sm">
           <div class="flex items-center justify-between">
             <h3 class="text-xs font-bold text-stone-700 flex items-center gap-1.5">
               <i class="fa-solid fa-list-ol text-[#9e2a2b]"></i>
-              <span>下方子女排行与归属</span>
+              <span>下方子女长幼排行 (自右向左)</span>
               <span id="childrenCountBadge" class="bg-stone-100 text-stone-600 px-1.5 py-0.2 rounded text-[11px]">0</span>
             </h3>
             <div class="admin-only-block flex items-center gap-1.5">
@@ -310,8 +311,10 @@
               </button>
             </div>
           </div>
-          <p class="text-[11px] text-stone-400">可拖拽或点上下箭头排定长幼（树图从左至右实时同步）</p>
-          <div id="childrenSortList" class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5"></div>
+          <p class="text-[11px] text-[#9e2a2b] bg-red-50/70 px-2 py-1 rounded border border-red-100">
+            📜 <strong>排一（最大）在树图最右边</strong>，依次往左排，最小的在最左边。上下拖动或点箭头即可调整大小顺序！
+          </p>
+          <div id="childrenSortList" class="space-y-1.5 max-h-52 overflow-y-auto pr-0.5"></div>
         </div>
 
         <!-- 4. 个人基础名讳与生平编辑 -->
@@ -369,7 +372,7 @@
     </aside>
   </div>
 
-  <!-- 模态框 0：随时随地自由新增族人弹窗（可独立创建，也可顺便绑定父母/子女/配偶） -->
+  <!-- 模态框 0：随时随地自由新增族人弹窗 -->
   <div id="standalonePersonModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-[#fdfbf7] border border-stone-300 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
       <div class="px-5 py-3.5 bg-[#2c2623] text-amber-100 flex items-center justify-between">
@@ -410,7 +413,6 @@
           </div>
         </div>
 
-        <!-- 可选：是否在创建时直接关联已有族人 -->
         <div class="border-t border-stone-200 pt-3 space-y-2">
           <label class="block text-stone-700 font-bold">关系挂载方式（可选）</label>
           <div class="grid grid-cols-2 gap-2">
@@ -432,7 +434,7 @@
     </div>
   </div>
 
-  <!-- 模态框 1：围绕选中人物添加/选择亲属（支持新建族人 或 直接选择谱内已有成员归位） -->
+  <!-- 模态框 1：围绕选中人物添加/选择亲属 -->
   <div id="relationModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-[#fdfbf7] border border-stone-300 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
       <div class="px-5 py-3.5 bg-[#2c2623] text-amber-100 flex items-center justify-between">
@@ -442,7 +444,6 @@
         </button>
       </div>
 
-      <!-- 模式切换 Tab：新建人物 vs 选择谱中已有族人 -->
       <div class="flex border-b border-stone-200 bg-stone-100 text-xs font-semibold">
         <button id="tabNewPerson" onclick="switchRelModalTab('new')" class="flex-1 py-2.5 text-center border-b-2 border-[#9e2a2b] text-[#9e2a2b] bg-white">
           <i class="fa-solid fa-user-plus mr-1"></i>新建族人并归位
@@ -482,12 +483,12 @@
         </div>
 
         <div id="newRelOrderWrap" class="hidden">
-          <label class="block text-stone-600 mb-1 font-medium">排入次序位置</label>
+          <label class="block text-stone-600 mb-1 font-medium">长幼排位（树图自右向左，最大在最右，最小在最左）</label>
           <select id="newRelOrderPos" class="w-full border border-stone-300 rounded px-3 py-2 bg-white">
-            <option value="last">排在最末（幼子/幼女）</option>
-            <option value="first">排在最前（居长/长子长女）</option>
-            <option value="before">紧邻当前人物左侧（兄/姐）</option>
-            <option value="after">紧邻当前人物右侧（弟/妹）</option>
+            <option value="last">排在最末 / 最小（置于树图最左边）</option>
+            <option value="first">排在居首 / 最大（置于树图最右边）</option>
+            <option value="before">比当前人年长一位（紧邻当前人物右侧）</option>
+            <option value="after">比当前人年幼一位（紧邻当前人物左侧）</option>
           </select>
         </div>
 
@@ -505,7 +506,7 @@
       <!-- Tab 2: 选择已有族人作为父母/子女/配偶 -->
       <div id="relTabExistingBody" class="hidden p-5 space-y-3.5 text-xs">
         <div class="bg-sky-50 border border-sky-200 text-sky-900 px-3 py-2 rounded-lg leading-relaxed">
-          选择谱中已有族人后，系统会自动建立血缘连线，将其归入上方（父母）或下方（子女），并自动同步调整对应世代与树图坐标。
+          选择谱中已有族人后，系统会自动建立血缘连线，将其归入上方（父母）或下方（子女），并按「以右为长」自动排布。
         </div>
 
         <div>
@@ -579,8 +580,8 @@
       </div>
       <div class="p-5 space-y-4 text-xs">
         <div class="bg-indigo-50 border border-indigo-200 text-indigo-950 p-3.5 rounded-lg space-y-1.5 leading-relaxed">
-          <div class="font-bold text-sm">📌 为什么别人打开网址看不到我刚改的内容？</div>
-          <p>因为 Vercel 托管的是 GitHub 上的静态文件，您平时的修改会自动保存在您自己的浏览器里。想要让<strong>所有宗亲打开网址都直接看到您修好的最新族谱（且默认处于只读保护状态）</strong>，只需点击下方按钮下载打包好最新数据的 <code>index.html</code> 并上传替换到 GitHub 即可！</p>
+          <div class="font-bold text-sm">📌 如何让家族所有人打开网址都看到最新修好的族谱？</div>
+          <p>点击下方按钮下载打包好最新数据的 <code>index.html</code> 并上传替换到您的 GitHub 仓库，所有宗亲打开网址就会直接看到您修好的最新族谱（且默认处于只读保护状态）！</p>
         </div>
 
         <button onclick="downloadBundledHtmlForGithub()" class="w-full py-3 px-4 rounded-xl bg-indigo-700 hover:bg-indigo-600 text-white font-bold shadow-lg flex items-center justify-between transition">
@@ -602,7 +603,7 @@
     </div>
   </div>
 
-  <!-- 模态框 4：多族谱管理（新建、切换、删除族谱） -->
+  <!-- 模态框 4：多族谱管理 -->
   <div id="bookModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div class="bg-[#fdfbf7] border border-stone-300 rounded-xl shadow-2xl w-full max-w-xl overflow-hidden">
       <div class="px-5 py-3.5 bg-[#2c2623] text-amber-100 flex items-center justify-between">
@@ -640,8 +641,8 @@
       <div class="p-5 space-y-3 text-xs">
         <button onclick="exportFamilyPdf()" class="w-full flex items-center justify-between p-3.5 rounded-lg bg-[#9e2a2b] hover:bg-[#822021] text-white shadow transition">
           <div class="text-left">
-            <div class="font-bold text-sm">📜 导出 PDF 族谱画卷（含世系图）</div>
-            <div class="text-[11px] text-amber-100/90 mt-0.5">宣纸古籍双线边框，自动按世代及长幼排序生成</div>
+            <div class="font-bold text-sm">📜 导出 PDF 族谱画卷（传统自右向左规制）</div>
+            <div class="text-[11px] text-amber-100/90 mt-0.5">宣纸古籍双线边框，含「排一·长子」等总排行标识</div>
           </div>
           <i class="fa-solid fa-download text-lg"></i>
         </button>
@@ -674,28 +675,27 @@
 
   <script>
     /********************************************************************
-     * 一、内置快照与核心存储结构（支持一键打包最新数据发布到 GitHub）
+     * 一、内置快照与核心存储结构
      ********************************************************************/
     /*__EMBEDDED_SNAPSHOT_START__*/
     const EMBEDDED_DEFAULT_STORE = null;
     /*__EMBEDDED_SNAPSHOT_END__*/
 
-    const STORAGE_KEY = 'YUANLIU_FAMILY_BOOKS_V4';
-    const AUTH_SESSION_KEY = 'YUANLIU_ADMIN_UNLOCKED_V4';
+    const STORAGE_KEY = 'YUANLIU_FAMILY_BOOKS_V5';
+    const AUTH_SESSION_KEY = 'YUANLIU_ADMIN_UNLOCKED_V5';
 
     let store = {
       activeBookId: 'book_default',
-      adminPwdHash: simpleHash('888888'), // 默认管理员密码 888888
+      adminPwdHash: simpleHash('888888'),
       requirePasswordToEdit: true,
       books: {}
     };
 
-    let isAdminUnlocked = true; // 本地首次打开默认解锁方便直接体验；若是由打包后分享的网页打开则默认锁定
+    let isAdminUnlocked = true;
     let selectedPersonId = null;
-    let currentRelModalMode = 'parent'; // 'parent' | 'child' | 'spouse' | 'sibling'
-    let currentRelModalTab = 'new';     // 'new' | 'existing'
+    let currentRelModalMode = 'parent';
+    let currentRelModalTab = 'new';
 
-    // 画布视口状态
     let viewState = { x: 120, y: 60, scale: 1, isPanning: false, startX: 0, startY: 0 };
 
     function simpleHash(str) {
@@ -708,13 +708,14 @@
       return 'h_' + (h >>> 0).toString(16);
     }
 
+    // 示例：特意设计二世中「长女李秀兰（1943）」比「长子李振国（1945）」年长，直观展示「排一·长女（最右） -> 排二·长子（居中） -> 排三·次子（最左）」
     function createDemoBook() {
       const people = {
-        p1: { id: 'p1', name: '李崇德', courtesy: '字明远', title: '始迁祖', gender: 'M', generation: 1, birthYear: '1920', deathYear: '1998', bio: '自陇西迁居于此，耕读传家，立下家规。', fatherId: null, motherId: null, spouseIds: ['p2'], childrenIds: ['p3', 'p4', 'p5'] },
-        p2: { id: 'p2', name: '王淑贞', courtesy: '封太恭人', title: '始祖母', gender: 'F', generation: 1, birthYear: '1923', deathYear: '2003', bio: '勤俭持家，育有二子一女。', fatherId: null, motherId: null, spouseIds: ['p1'], childrenIds: ['p3', 'p4', 'p5'] },
-        p3: { id: 'p3', name: '李振国', courtesy: '字守正', title: '长房', gender: 'M', generation: 2, birthYear: '1945', deathYear: '今', bio: '秉承家训，主修族谱。', fatherId: 'p1', motherId: 'p2', spouseIds: ['p6'], childrenIds: ['p8', 'p9'] },
-        p4: { id: 'p4', name: '李振邦', courtesy: '字守业', title: '二房', gender: 'M', generation: 2, birthYear: '1948', deathYear: '今', bio: '经商致富，捐建宗祠。', fatherId: 'p1', motherId: 'p2', spouseIds: ['p7'], childrenIds: ['p10'] },
-        p5: { id: 'p5', name: '李秀兰', courtesy: '适张氏', title: '长姑', gender: 'F', generation: 2, birthYear: '1952', deathYear: '今', bio: '温婉贤淑，任教多年。', fatherId: 'p1', motherId: 'p2', spouseIds: [], childrenIds: [] },
+        p1: { id: 'p1', name: '李崇德', courtesy: '字明远', title: '始迁祖', gender: 'M', generation: 1, birthYear: '1920', deathYear: '1998', bio: '自陇西迁居于此，耕读传家，立下家规。', fatherId: null, motherId: null, spouseIds: ['p2'], childrenIds: ['p5', 'p3', 'p4'] },
+        p2: { id: 'p2', name: '王淑贞', courtesy: '封太恭人', title: '始祖母', gender: 'F', generation: 1, birthYear: '1922', deathYear: '2003', bio: '勤俭持家，育有一女二子（长女居长）。', fatherId: null, motherId: null, spouseIds: ['p1'], childrenIds: ['p5', 'p3', 'p4'] },
+        p5: { id: 'p5', name: '李秀兰', courtesy: '适张氏', title: '大姐', gender: 'F', generation: 2, birthYear: '1943', deathYear: '今', bio: '同胞居长（排一·长女），温婉贤淑，任教多年。', fatherId: 'p1', motherId: 'p2', spouseIds: [], childrenIds: [] },
+        p3: { id: 'p3', name: '李振国', courtesy: '字守正', title: '长房', gender: 'M', generation: 2, birthYear: '1945', deathYear: '今', bio: '同胞行二（排二·长子），秉承家训，主修族谱。', fatherId: 'p1', motherId: 'p2', spouseIds: ['p6'], childrenIds: ['p8', 'p9'] },
+        p4: { id: 'p4', name: '李振邦', courtesy: '字守业', title: '二房', gender: 'M', generation: 2, birthYear: '1948', deathYear: '今', bio: '同胞行三（排三·次子），经商致富，捐建宗祠。', fatherId: 'p1', motherId: 'p2', spouseIds: ['p7'], childrenIds: ['p10'] },
         p6: { id: 'p6', name: '陈慧芳', courtesy: '', title: '长房配', gender: 'F', generation: 2, birthYear: '1947', deathYear: '今', bio: '', fatherId: null, motherId: null, spouseIds: ['p3'], childrenIds: ['p8', 'p9'] },
         p7: { id: 'p7', name: '林月娥', courtesy: '', title: '二房配', gender: 'F', generation: 2, birthYear: '1950', deathYear: '今', bio: '', fatherId: null, motherId: null, spouseIds: ['p4'], childrenIds: ['p10'] },
         p8: { id: 'p8', name: '李嘉豪', courtesy: '字景行', title: '长孙', gender: 'M', generation: 3, birthYear: '1972', deathYear: '今', bio: '高级工程师。', fatherId: 'p3', motherId: 'p6', spouseIds: ['p11'], childrenIds: ['p12', 'p13'] },
@@ -779,7 +780,6 @@
         store.activeBookId = demo.id;
       }
 
-      // 判断管理员会话状态：如果网页内置了打包数据，访客打开默认是只读模式，需输密码解锁
       const sessionUnlocked = sessionStorage.getItem(AUTH_SESSION_KEY);
       if (sessionUnlocked === '1') {
         isAdminUnlocked = true;
@@ -812,7 +812,7 @@
     }
 
     /********************************************************************
-     * 二、随时随地自由新增任意族人（支持独立节点或直接挂载关系）
+     * 二、随时随地自由新增任意族人
      ********************************************************************/
     function openStandalonePersonModal(defaultGen) {
       if (!ensureAdminPermission()) return;
@@ -826,7 +826,6 @@
       document.getElementById('freePersonTitle').value = '';
       document.getElementById('freePersonLinkType').value = 'none';
 
-      // 填充目标族人下拉框
       const targetSelect = document.getElementById('freePersonTargetId');
       const allPeople = Object.values(book.people).sort((a, b) => (a.generation || 1) - (b.generation || 1));
       targetSelect.innerHTML = allPeople.map(p =>
@@ -1001,7 +1000,7 @@
     }
 
     /********************************************************************
-     * 四、绑定/更换父母或子女，自动归到上方或下方并防环检测
+     * 四、绑定/更换父母或子女，自动归到上方或下方
      ********************************************************************/
     function isDescendantOf(potentialDescendantId, personId, people) {
       const visited = new Set();
@@ -1118,13 +1117,13 @@
     }
 
     /********************************************************************
-     * 五、树状图层次布局引擎
+     * 五、传统宗谱「自右向左（以右为尊、老大在最右、最小在最左）」布局引擎
      ********************************************************************/
-    const CARD_W = 148;
-    const CARD_H = 88;
+    const CARD_W = 158;
+    const CARD_H = 92;
     const SPOUSE_GAP = 22;
     const SIBLING_GAP = 42;
-    const GEN_ROW_H = 175;
+    const GEN_ROW_H = 178;
 
     function computeFamilyTreeLayout(people) {
       const allIds = Object.keys(people);
@@ -1158,6 +1157,7 @@
         return CARD_W + spCount * (CARD_W + SPOUSE_GAP);
       }
 
+      // 获取从长到幼排序的子女数组 [老大, 老二, 老三...]
       function getOrderedChildren(id) {
         const p = people[id];
         if (!p) return [];
@@ -1233,6 +1233,11 @@
       const positions = {};
       const placed = new Set();
 
+      /**
+       * 核心：自右向左放置子树！
+       * - 家庭单元内：主血缘人排在右侧，配偶排在其左侧（男右女左 / 主右配左）
+       * - 子女排列：children[0]（老大）排在最右边，children[last]（最小）排在最左边！
+       */
       function placeSubtree(id, leftX) {
         if (placed.has(id)) return;
         placed.add(id);
@@ -1244,20 +1249,25 @@
         const y = 80 + (gen - minGen) * GEN_ROW_H;
 
         const unitStartX = leftX + (subW - unitW) / 2;
-        positions[id] = { x: unitStartX, y, gen };
+        const unitRightEdge = unitStartX + unitW;
 
+        // 主节点放在家庭单元最右侧
+        positions[id] = { x: unitRightEdge - CARD_W, y, gen };
+
+        // 配偶依次往左排列
         const spouses = primarySpouseMap[id] || [];
         spouses.forEach((sid, idx) => {
           placed.add(sid);
           const spGen = people[sid].generation || gen;
           const spY = 80 + (spGen - minGen) * GEN_ROW_H;
           positions[sid] = {
-            x: unitStartX + (idx + 1) * (CARD_W + SPOUSE_GAP),
+            x: unitRightEdge - CARD_W - (idx + 1) * (CARD_W + SPOUSE_GAP),
             y: spY,
             gen: spGen
           };
         });
 
+        // 放置子女：从右往左！老大在最右，最小在最左
         const children = getOrderedChildren(id);
         if (children.length > 0) {
           let totalChildrenW = 0;
@@ -1265,28 +1275,39 @@
             totalChildrenW += (subtreeWidthMap[cid] || getUnitWidth(cid));
             if (i < children.length - 1) totalChildrenW += SIBLING_GAP;
           });
-          let childLeft = leftX + (subW - totalChildrenW) / 2;
+          // 从最右端开始向左分配每个子女的子树区间
+          let childRightCursor = leftX + (subW + totalChildrenW) / 2;
           children.forEach(cid => {
             const cw = subtreeWidthMap[cid] || getUnitWidth(cid);
-            placeSubtree(cid, childLeft);
-            childLeft += cw + SIBLING_GAP;
+            const childLeftX = childRightCursor - cw;
+            placeSubtree(cid, childLeftX);
+            childRightCursor = childLeftX - SIBLING_GAP;
           });
         }
       }
 
-      let cursorX = 120;
-      rootIds.forEach(rid => {
-        const w = subtreeWidthMap[rid] || getUnitWidth(rid);
-        placeSubtree(rid, cursorX);
-        cursorX += w + SIBLING_GAP * 1.5;
+      // 多个根节点同样按自右向左排列（年长/先祖支系在右，新支系在左）
+      let totalRootsW = 0;
+      rootIds.forEach((rid, idx) => {
+        totalRootsW += (subtreeWidthMap[rid] || getUnitWidth(rid));
+        if (idx < rootIds.length - 1) totalRootsW += SIBLING_GAP * 1.5;
       });
 
+      let rootRightCursor = 160 + totalRootsW;
+      rootIds.forEach(rid => {
+        const w = subtreeWidthMap[rid] || getUnitWidth(rid);
+        const rLeft = rootRightCursor - w;
+        placeSubtree(rid, rLeft);
+        rootRightCursor = rLeft - SIBLING_GAP * 1.5;
+      });
+
+      let fallbackX = 160 + totalRootsW + SIBLING_GAP * 1.5;
       allIds.forEach(id => {
         if (!placed.has(id)) {
           const p = people[id];
           const gen = p.generation || 1;
-          positions[id] = { x: cursorX, y: 80 + (gen - minGen) * GEN_ROW_H, gen };
-          cursorX += CARD_W + SIBLING_GAP;
+          positions[id] = { x: fallbackX, y: 80 + (gen - minGen) * GEN_ROW_H, gen };
+          fallbackX += CARD_W + SIBLING_GAP;
         }
       });
 
@@ -1309,20 +1330,57 @@
       return { positions, bounds: { minX, maxX, minY, maxY }, genRows };
     }
 
-    function getBirthOrderBadge(person, people) {
+    /**
+     * 核心：计算每个人的【同胞总排行 + 男女分排行】双重详情！
+     * 解决“只有长子、长女看不出谁大谁小”的问题：
+     * - overallText: "排一"、"排二"、"排三"...（在所有同胞兄弟姐妹中的绝对大小次序）
+     * - genderText:  "长子"、"次子" / "长女"、"次女"
+     * - combinedBadge: 当同胞超过 1 人时显示 "排一·长女"、"排二·长子"；独生时显示 "独子(排一)" 或 "长子"
+     */
+    function getBirthOrderDetail(person, people) {
       const parent = (person.fatherId && people[person.fatherId]) || (person.motherId && people[person.motherId]);
-      if (!parent || !parent.childrenIds) {
-        return person.generation === 1 ? '始祖' : `第${person.generation}世`;
+      if (!parent || !parent.childrenIds || parent.childrenIds.length === 0) {
+        const label = person.generation === 1 ? '始祖' : `第${person.generation}世`;
+        return {
+          hasParent: false,
+          overallNum: 1,
+          totalSiblings: 1,
+          overallText: '',
+          genderText: label,
+          combinedBadge: label
+        };
       }
-      const cnNums = ['长', '次', '三', '四', '五', '六', '七', '八', '九', '十'];
-      const sameGenderSiblings = parent.childrenIds
-        .map(id => people[id])
-        .filter(Boolean)
-        .filter(c => c.gender === person.gender);
-      const idx = sameGenderSiblings.findIndex(c => c.id === person.id);
-      if (idx === -1) return `第${person.generation}世`;
-      const prefix = cnNums[idx] || `${idx + 1}`;
-      return person.gender === 'F' ? `${prefix}女` : `${prefix}子`;
+
+      const cnOrder = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+      const cnRank = ['长', '次', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+      const allSiblings = parent.childrenIds.map(id => people[id]).filter(Boolean);
+      const overallIdx = allSiblings.findIndex(c => c.id === person.id);
+
+      const sameGenderSiblings = allSiblings.filter(c => c.gender === person.gender);
+      const genderIdx = sameGenderSiblings.findIndex(c => c.id === person.id);
+
+      if (overallIdx === -1) {
+        const fallback = `第${person.generation}世`;
+        return { hasParent: false, overallNum: 1, totalSiblings: 1, overallText: '', genderText: fallback, combinedBadge: fallback };
+      }
+
+      const overallText = `排${cnOrder[overallIdx] || (overallIdx + 1)}`;
+      const genderPrefix = cnRank[genderIdx] || `${genderIdx + 1}`;
+      const genderText = person.gender === 'F' ? `${genderPrefix}女` : `${genderPrefix}子`;
+
+      return {
+        hasParent: true,
+        overallNum: overallIdx + 1,
+        totalSiblings: allSiblings.length,
+        overallText,
+        genderText,
+        combinedBadge: `${overallText}·${genderText}`
+      };
+    }
+
+    function getBirthOrderBadge(person, people) {
+      return getBirthOrderDetail(person, people).combinedBadge;
     }
 
     /********************************************************************
@@ -1377,7 +1435,6 @@
         readonlyBanner.classList.remove('hidden');
       }
 
-      // 控制所有编辑控件与按钮的可用状态
       document.querySelectorAll('.admin-only-btn, .admin-only-block').forEach(el => {
         if (isAdminUnlocked) el.classList.remove('hidden');
         else el.classList.add('hidden');
@@ -1395,12 +1452,14 @@
 
       const { positions, bounds, genRows } = layout;
 
-      const bandLeft = Math.min(40, bounds.minX - 90);
-      const bandWidth = Math.max(1200, (bounds.maxX - bandLeft) + 200);
+      const bandLeft = Math.min(40, bounds.minX - 120);
+      const bandRight = Math.max(1100, bounds.maxX + 140);
+      const bandWidth = bandRight - bandLeft;
 
+      // 左右两侧均显示「第 X 世」印章标尺，契合自右向左的古籍阅读动线
       genRows.forEach((row, idx) => {
         const band = document.createElement('div');
-        band.className = 'absolute pointer-events-none flex items-center';
+        band.className = 'absolute pointer-events-none flex items-center justify-between px-3';
         band.style.left = `${bandLeft}px`;
         band.style.top = `${row.y - 18}px`;
         band.style.width = `${bandWidth}px`;
@@ -1410,17 +1469,24 @@
           band.style.backgroundColor = 'rgba(229, 222, 201, 0.22)';
         }
 
-        // 在每一世标签旁增加一个「+本世族人」快捷按钮（管理员可见）
+        const addBtnHtml = isAdminUnlocked ? `
+          <button onclick="openStandalonePersonModal(${row.gen})" class="w-6 h-6 rounded-full bg-white/90 hover:bg-[#9e2a2b] text-stone-700 hover:text-white border border-stone-300 shadow-sm flex items-center justify-center text-xs transition" title="直接在此世代新增一位族人">
+            <i class="fa-solid fa-plus text-[10px]"></i>
+          </button>
+        ` : '';
+
         band.innerHTML = `
-          <div class="ml-3 flex items-center gap-1.5 pointer-events-auto">
+          <div class="flex items-center gap-1.5 pointer-events-auto">
             <div class="px-2.5 py-1 rounded bg-[#2c2623] text-amber-100 serif-title text-xs font-bold shadow border border-amber-500/40 tracking-widest">
               第 ${row.gen} 世
             </div>
-            ${isAdminUnlocked ? `
-              <button onclick="openStandalonePersonModal(${row.gen})" class="w-6 h-6 rounded-full bg-white/90 hover:bg-[#9e2a2b] text-stone-700 hover:text-white border border-stone-300 shadow-sm flex items-center justify-center text-xs transition" title="直接在此世代新增一位族人">
-                <i class="fa-solid fa-plus text-[10px]"></i>
-              </button>
-            ` : ''}
+            ${addBtnHtml}
+          </div>
+          <div class="flex items-center gap-1.5 pointer-events-auto">
+            ${addBtnHtml}
+            <div class="px-2.5 py-1 rounded bg-[#9e2a2b] text-amber-100 serif-title text-xs font-bold shadow border border-amber-300/40 tracking-widest">
+              第 ${row.gen} 世 (右起居长)
+            </div>
           </div>
         `;
         nodesLayer.appendChild(band);
@@ -1490,7 +1556,7 @@
         const isSelected = person.id === selectedPersonId;
         const isMale = person.gender !== 'F';
         const topBarColor = isMale ? 'bg-[#3b5975]' : 'bg-[#a84255]';
-        const rankBadge = getBirthOrderBadge(person, people);
+        const detail = getBirthOrderDetail(person, people);
 
         const card = document.createElement('div');
         card.className = `person-card absolute bg-[#fffdf9] rounded-lg border ${isSelected ? 'selected border-[#9e2a2b]' : 'border-stone-300'} overflow-hidden cursor-pointer select-none`;
@@ -1503,6 +1569,7 @@
           selectPerson(person.id);
         };
 
+        // 卡片右上角同时显示「排一·长女」或「排二·长子」，一眼看清同胞绝对大小与男女分排
         card.innerHTML = `
           <div class="h-1.5 w-full ${topBarColor}"></div>
           <div class="p-2.5 flex flex-col justify-between h-[calc(100%-6px)]">
@@ -1510,9 +1577,12 @@
               <div class="truncate">
                 <span class="serif-title font-bold text-sm text-stone-900">${escapeHtml(person.name || '未命名')}</span>
               </div>
-              <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded font-semibold ${isMale ? 'bg-slate-100 text-[#3b5975]' : 'bg-rose-50 text-[#a84255]'} border border-current/20">
-                ${escapeHtml(rankBadge)}
-              </span>
+              <div class="shrink-0 flex items-center gap-0.5">
+                ${detail.hasParent ? `<span class="text-[10px] px-1 py-0.5 rounded-l font-bold bg-[#9e2a2b] text-amber-50" title="同胞长幼总排行：第${detail.overallNum}位">${escapeHtml(detail.overallText)}</span>` : ''}
+                <span class="text-[10px] px-1.5 py-0.5 ${detail.hasParent ? 'rounded-r' : 'rounded'} font-semibold ${isMale ? 'bg-slate-100 text-[#3b5975]' : 'bg-rose-50 text-[#a84255]'} border border-current/20">
+                  ${escapeHtml(detail.genderText)}
+                </span>
+              </div>
             </div>
             <div class="text-[11px] text-stone-500 truncate">
               ${escapeHtml(person.courtesy || person.title || `第 ${person.generation} 世`)}
@@ -1578,7 +1648,8 @@
         listEl.innerHTML = '';
         childrenIds.forEach((cid, idx) => {
           const child = people[cid];
-          const badge = getBirthOrderBadge(child, people);
+          const detail = getBirthOrderDetail(child, people);
+          const posHint = idx === 0 ? '最右(居长)' : (idx === childrenIds.length - 1 ? '最左(最幼)' : `右起第${idx + 1}`);
           const item = document.createElement('div');
           item.className = `flex items-center justify-between px-2.5 py-1.5 rounded bg-stone-50 hover:bg-amber-50/60 border border-stone-200 text-xs transition ${isAdminUnlocked ? 'cursor-move' : ''}`;
           item.draggable = isAdminUnlocked;
@@ -1599,18 +1670,19 @@
           }
 
           item.innerHTML = `
-            <div class="flex items-center gap-2 truncate">
+            <div class="flex items-center gap-1.5 truncate">
               <i class="fa-solid fa-grip-vertical text-stone-300 text-[10px]"></i>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${child.gender === 'F' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-800'}">${badge}</span>
-              <span onclick="selectPerson('${child.id}')" class="font-medium text-stone-800 hover:text-[#9e2a2b] cursor-pointer truncate">${escapeHtml(child.name)}</span>
-              <span class="text-[10px] text-stone-400">${escapeHtml(child.birthYear || '')}</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#9e2a2b] text-white">${escapeHtml(detail.overallText)}</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${child.gender === 'F' ? 'bg-rose-100 text-rose-800' : 'bg-slate-200 text-slate-800'}">${escapeHtml(detail.genderText)}</span>
+              <span onclick="selectPerson('${child.id}')" class="font-bold text-stone-800 hover:text-[#9e2a2b] cursor-pointer truncate">${escapeHtml(child.name)}</span>
+              <span class="text-[10px] text-amber-800/80">(${posHint})</span>
             </div>
             ${isAdminUnlocked ? `
               <div class="flex items-center gap-1 shrink-0">
-                <button onclick="moveChildStep('${p.id}', ${idx}, -1)" class="w-5 h-5 rounded hover:bg-stone-200 text-stone-600 flex items-center justify-center" title="长幼前移">
+                <button onclick="moveChildStep('${p.id}', ${idx}, -1)" class="w-5 h-5 rounded hover:bg-stone-200 text-stone-600 flex items-center justify-center" title="提长一位（往右移）">
                   <i class="fa-solid fa-arrow-up text-[10px]"></i>
                 </button>
-                <button onclick="moveChildStep('${p.id}', ${idx}, 1)" class="w-5 h-5 rounded hover:bg-stone-200 text-stone-600 flex items-center justify-center" title="长幼后移">
+                <button onclick="moveChildStep('${p.id}', ${idx}, 1)" class="w-5 h-5 rounded hover:bg-stone-200 text-stone-600 flex items-center justify-center" title="顺延一位（往左移）">
                   <i class="fa-solid fa-arrow-down text-[10px]"></i>
                 </button>
                 <button onclick="unbindChild('${p.id}', '${child.id}')" class="w-5 h-5 rounded hover:bg-red-100 text-stone-400 hover:text-red-600 flex items-center justify-center" title="解除父子/母子从属">
@@ -1703,7 +1775,6 @@
       document.getElementById('publishSyncModal').classList.add('hidden');
     }
 
-    // 生成内置当前最新族谱数据和密码的完整 index.html 供用户上传 GitHub
     function downloadBundledHtmlForGithub() {
       saveStore();
       const rawHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
@@ -1752,6 +1823,7 @@
       syncChildrenOrderToSpouses(parent, book.people);
       saveStore();
       renderAll();
+      showToast('已调整子女长幼次序（最大在最右，最小在最左）');
     }
 
     function reorderChild(parentId, draggedId, targetId) {
@@ -1770,7 +1842,7 @@
       syncChildrenOrderToSpouses(parent, book.people);
       saveStore();
       renderAll();
-      showToast('已更新子女长幼排行');
+      showToast('已更新子女长幼排行（树图自右向左同步重排）');
     }
 
     function sortChildrenByBirth() {
@@ -1786,7 +1858,7 @@
       syncChildrenOrderToSpouses(parent, book.people);
       saveStore();
       renderAll();
-      showToast('已按出生年份排定子女长幼次序');
+      showToast('已按出生年份排定长幼：最年长者在最右，最年幼者在最左');
     }
 
     function savePersonField(field, value) {
@@ -1837,9 +1909,9 @@
 
       const titles = {
         parent: `为「${curr.name}」添加或选择父母 (归于上方)`,
-        child: `为「${curr.name}」添加或选择子女 (归于下方)`,
+        child: `为「${curr.name}」添加或选择子女 (下方自右向左排)`,
         spouse: `为「${curr.name}」添加或关联配偶 (并列同代)`,
-        sibling: `为「${curr.name}」添加同胞兄弟姐妹 (同代排布)`
+        sibling: `为「${curr.name}」添加同胞兄弟姐妹 (自右向左排)`
       };
       document.getElementById('relModalTitle').textContent = titles[mode];
 
@@ -1859,7 +1931,7 @@
         banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的生父/生母置于其<strong>上方</strong>。若当前人物为第 1 世，添加父母后全谱会自动顺延一世。`;
         document.getElementById('newRelGender').value = curr.fatherId ? 'F' : 'M';
       } else if (mode === 'child') {
-        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的子女置于其<strong>下方（第 ${(curr.generation || 1) + 1} 世）</strong>。`;
+        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的子女置于其<strong>下方（第 ${(curr.generation || 1) + 1} 世）</strong>，遵循长者在右、幼者在左。`;
         orderWrap.classList.remove('hidden');
         const spouses = (curr.spouseIds || []).map(id => book.people[id]).filter(Boolean);
         if (spouses.length > 0) {
@@ -1872,7 +1944,7 @@
         document.getElementById('newRelName').value = '';
         document.getElementById('newRelGender').value = curr.gender === 'M' ? 'F' : 'M';
       } else if (mode === 'sibling') {
-        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的同胞兄弟姐妹置于<strong>第 ${curr.generation || 1} 世</strong>（自动共享父母）。`;
+        banner.innerHTML = `将作为 <strong>${escapeHtml(curr.name)}</strong> 的同胞兄弟姐妹置于<strong>第 ${curr.generation || 1} 世</strong>（长者在右，幼者在左）。`;
         orderWrap.classList.remove('hidden');
       }
 
@@ -1974,7 +2046,7 @@
         insertChildAtOrder(curr, newId, orderPos, null);
         saveStore();
         renderAll();
-        showToast(`已添加子女「${name}」并置于「${curr.name}」下方`);
+        showToast(`已添加子女「${name}」并按自右向左规制排布`);
 
       } else if (currentRelModalMode === 'spouse') {
         newPerson.generation = curr.generation || 1;
@@ -2156,7 +2228,6 @@
       viewState.startY = e.clientY - viewState.y;
     });
 
-    // 双击画布空白处，直接打开随时随地新增族人弹窗
     canvasContainer.addEventListener('dblclick', (e) => {
       if (e.target.closest('.person-card') || e.target.closest('button')) return;
       openStandalonePersonModal();
@@ -2188,13 +2259,13 @@
       const book = getCurrentBook();
       const { bounds } = computeFamilyTreeLayout(book.people);
       const rect = canvasContainer.getBoundingClientRect();
-      const treeW = Math.max(300, bounds.maxX - bounds.minX + 160);
+      const treeW = Math.max(300, bounds.maxX - bounds.minX + 240);
       const treeH = Math.max(200, bounds.maxY - bounds.minY + 160);
       const scaleX = rect.width / treeW;
       const scaleY = rect.height / treeH;
       viewState.scale = Math.min(1.1, Math.max(0.45, Math.min(scaleX, scaleY)));
       viewState.x = (rect.width - (bounds.minX + bounds.maxX) * viewState.scale) / 2;
-      viewState.y = 40;
+      viewState.y = 45;
       applyTransform();
     }
 
@@ -2231,11 +2302,11 @@
       const demo = createDemoBook();
       const book = getCurrentBook();
       book.people = demo.people;
-      selectedPersonId = 'p3';
+      selectedPersonId = 'p1';
       saveStore();
       renderAll();
       centerTree();
-      showToast('已加载四世同堂示例');
+      showToast('已加载四世同堂示例（二世：排一·长女在最右，排二·长子居中，排三·次子在最左）');
     }
 
     function handleSearch(val) {
@@ -2257,7 +2328,7 @@
         box.innerHTML = matches.map(p => `
           <div onclick="focusPersonFromSearch('${p.id}')" class="px-3 py-2 hover:bg-amber-50 cursor-pointer flex items-center justify-between text-xs border-b border-stone-100">
             <span class="font-bold text-stone-800">${escapeHtml(p.name)}</span>
-            <span class="text-amber-800">第 ${p.generation} 世</span>
+            <span class="text-amber-800">第 ${p.generation} 世 · ${escapeHtml(getBirthOrderBadge(p, book.people))}</span>
           </div>
         `).join('');
       }
@@ -2382,10 +2453,10 @@
       const people = book.people;
       const { positions, bounds, genRows } = computeFamilyTreeLayout(people);
 
-      const padX = 140;
-      const padTop = 130;
+      const padX = 160;
+      const padTop = 135;
       const padBottom = 80;
-      const contentW = Math.max(900, bounds.maxX - bounds.minX + padX * 2);
+      const contentW = Math.max(960, bounds.maxX - bounds.minX + padX * 2);
       const contentH = Math.max(560, bounds.maxY - bounds.minY + padTop + padBottom);
 
       const scale = 2;
@@ -2406,7 +2477,11 @@
       ctx.fillStyle = '#2c2623';
       ctx.font = 'bold 28px "Noto Serif SC", serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${book.name} · 世系总图 (${book.hall || '传家堂'})`, contentW / 2, 68);
+      ctx.fillText(`${book.name} · 世系总图 (${book.hall || '传家堂'})`, contentW / 2, 62);
+
+      ctx.fillStyle = '#9e2a2b';
+      ctx.font = '13px "Noto Serif SC", serif';
+      ctx.fillText('【宗谱规制：自右向左排布 · 最右居长 · 最左居幼】', contentW / 2, 88);
 
       const offsetX = padX - bounds.minX;
       const offsetY = padTop - bounds.minY;
@@ -2417,6 +2492,8 @@
         ctx.font = 'bold 13px "Noto Serif SC", serif';
         ctx.textAlign = 'left';
         ctx.fillText(`第 ${r.gen} 世`, 42, ry + CARD_H / 2 + 4);
+        ctx.textAlign = 'right';
+        ctx.fillText(`第 ${r.gen} 世 (右起)`, contentW - 42, ry + CARD_H / 2 + 4);
       });
 
       ctx.strokeStyle = '#9c7a54';
@@ -2468,10 +2545,13 @@
         ctx.textAlign = 'left';
         ctx.fillText(p.name || '未命名', x + 10, y + 28);
 
+        ctx.fillStyle = '#9e2a2b';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(`${getBirthOrderBadge(p, people)} · 第${p.generation}世`, x + 10, y + 50);
+
         ctx.fillStyle = '#78716c';
         ctx.font = '11px sans-serif';
-        ctx.fillText(`${getBirthOrderBadge(p, people)} · 第${p.generation}世`, x + 10, y + 48);
-        ctx.fillText(`${p.birthYear || '?'} - ${p.deathYear || '今'}`, x + 10, y + 68);
+        ctx.fillText(`${p.birthYear || '?'} - ${p.deathYear || '今'}`, x + 10, y + 72);
       });
 
       return { canvas, width: contentW, height: contentH };
